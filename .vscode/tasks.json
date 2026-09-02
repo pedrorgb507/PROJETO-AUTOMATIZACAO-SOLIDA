@@ -1,0 +1,31 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Instalar dependencias",
+      "type": "shell",
+      "command": "python -m pip install -r requirements.txt",
+      "problemMatcher": []
+    },
+    {
+      "label": "Criar ambiente virtual (.venv)",
+      "type": "shell",
+      "command": "python -m venv .venv; .\.venv\Scripts\python.exe -m pip install -r requirements.txt",
+      "problemMatcher": []
+    },
+    {
+      "label": "Rodar testes",
+      "type": "shell",
+      "command": "python -m pytest -q",
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Iniciar CTP",
+      "type": "shell",
+      "command": "python run_ctp.py",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": []
+    }
+  ]
+}
