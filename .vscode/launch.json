@@ -5,7 +5,7 @@
       "name": "CTP: vigiar a pasta do dia",
       "type": "debugpy",
       "request": "launch",
-      "program": "${workspaceFolder}\run_ctp.py",
+      "program": "${workspaceFolder}/run_ctp.py",
       "console": "integratedTerminal",
       "justMyCode": true,
       "cwd": "${workspaceFolder}"
@@ -18,7 +18,7 @@
       "console": "integratedTerminal",
       "justMyCode": true,
       "cwd": "${workspaceFolder}",
-      "env": { "PYTHONPATH": "${workspaceFolder}\src" }
+      "env": { "PYTHONPATH": "${workspaceFolder}/src" }
     }
   ]
 }

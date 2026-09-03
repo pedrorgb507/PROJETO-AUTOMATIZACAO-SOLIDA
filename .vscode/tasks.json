@@ -4,26 +4,26 @@
     {
       "label": "Instalar dependencias",
       "type": "shell",
-      "command": "python -m pip install -r requirements.txt",
+      "command": "./.venv/Scripts/python.exe -m pip install -r requirements-dev.txt",
       "problemMatcher": []
     },
     {
       "label": "Criar ambiente virtual (.venv)",
       "type": "shell",
-      "command": "python -m venv .venv; .\.venv\Scripts\python.exe -m pip install -r requirements.txt",
+      "command": "python -m venv .venv; ./.venv/Scripts/python.exe -m pip install -r requirements-dev.txt",
       "problemMatcher": []
     },
     {
       "label": "Rodar testes",
       "type": "shell",
-      "command": "python -m pytest -q",
+      "command": "./.venv/Scripts/python.exe -m pytest -q",
       "group": "test",
       "problemMatcher": []
     },
     {
       "label": "Iniciar CTP",
       "type": "shell",
-      "command": "python run_ctp.py",
+      "command": "./.venv/Scripts/python.exe run_ctp.py",
       "group": { "kind": "build", "isDefault": true },
       "problemMatcher": []
     }
