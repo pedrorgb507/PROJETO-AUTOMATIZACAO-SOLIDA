@@ -1,4 +1,6 @@
-# FINART — Automação CTP
+# PROJETO FECHAMENTO CHAPA
+
+Fechamento de chapas para o CTP da Finart.
 
 Vigia a pasta do dia do cliente no servidor. A cada PDF novo: mede cada página,
 descobre quais tintas ela usa de verdade e gera **um PDF por página, só com essas
