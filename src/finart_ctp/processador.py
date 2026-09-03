@@ -14,7 +14,8 @@ import tempfile
 import time
 
 from .config import (FORMATOS, IMPRESSORA, IMPRIMIR_ORIGINAL,
-                     NOMES_TINTA, PASTA_CONTROLE, TOLERANCIA_MM)
+                     NOMES_TINTA, PASTA_CONTROLE, ROTULOS_PROVA,
+                     TOLERANCIA_MM)
 from .ghostscript import separar_tintas, tintas_por_pagina
 from .prova import imprimir
 from .nomes import extrair_oss, nome_saida
@@ -36,15 +37,26 @@ def medir_paginas(pdf):
     return medidas
 
 
-def identificar_formato(larg, alt):
-    """(dpi, sufixo) do formato que bate, ou (None, None)."""
+def casar_formato(larg, alt):
+    """Chave do formato cadastrado que bate com a medida, ou None."""
     medido = sorted([larg, alt])
-    for (a, b), (dpi, sufixo) in FORMATOS.items():
-        alvo = sorted([a, b])
+    for chave in FORMATOS:
+        alvo = sorted(chave)
         if (abs(medido[0] - alvo[0]) <= TOLERANCIA_MM and
                 abs(medido[1] - alvo[1]) <= TOLERANCIA_MM):
-            return dpi, sufixo
-    return None, None
+            return chave
+    return None
+
+
+def identificar_formato(larg, alt):
+    """(dpi, sufixo) do formato que bate, ou (None, None)."""
+    chave = casar_formato(larg, alt)
+    return FORMATOS[chave] if chave else (None, None)
+
+
+def rotulo_prova(larg, alt):
+    """Texto que vai no canto da folha de prova. Vazio se nao reconhecer."""
+    return ROTULOS_PROVA.get(casar_formato(larg, alt), "")
 
 
 def _gerar_chapa(origem, pasta_saida, base, pagina, dpi, larg, alt, usadas):
@@ -120,7 +132,8 @@ def processar(caminho, pasta_saida):
     # gastar papel se alguma pagina tiver formato conhecido.
     if IMPRIMIR_ORIGINAL and any(identificar_formato(l, a)[0] for l, a in medidas):
         try:
-            _, folhas = imprimir(caminho)
+            etiquetas = [rotulo_prova(l, a) for l, a in medidas]
+            _, folhas = imprimir(caminho, etiquetas=etiquetas)
             log("   impresso em %s (%d folha%s, so frente)"
                 % (IMPRESSORA, folhas, "s" if folhas > 1 else ""))
             resultado["impresso"] = folhas

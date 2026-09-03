@@ -38,6 +38,13 @@ FORMATOS = {
 
 TOLERANCIA_MM = 3
 
+# Etiqueta escrita no canto da folha de prova, fora da arte, para quem
+# pega o papel saber de que chapa se trata.
+ROTULOS_PROVA = {
+    (510, 400): "SOLIDA F4",
+    (775, 635): "SOLIDA F2",
+}
+
 # ----------------------------------------------------------------------
 # OPERACAO
 # ----------------------------------------------------------------------

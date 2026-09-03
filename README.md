@@ -26,7 +26,20 @@ Antes de gerar qualquer chapa, o **arquivo original do cliente** sai impresso na
 a impressora configurada, em **A4 retrato, só na frente**.
 
 A prova é montada aqui: a arte é rasterizada e centralizada numa folha A4 em pé
-(arte deitada é girada). Duas razões para não mandar o PDF do cliente direto:
+(arte deitada é girada).
+
+A folha leva no canto superior esquerdo, **fora da arte**, a etiqueta do
+formato — o alto da folha ganha uma faixa em branco e a arte desce para
+caber embaixo dela:
+
+| Formato da chapa | Etiqueta |
+|---|---|
+| 510 × 400 mm | `SOLIDA F4` |
+| 775 × 635 mm | `SOLIDA F2` |
+
+Formato não reconhecido sai sem etiqueta. O texto fica em `ROTULOS_PROVA`,
+no `config.py`.
+ Duas razões para não mandar o PDF do cliente direto:
 
 - o `-dFitPage` do Ghostscript 10.03.1 quebra quando precisa girar a página, que
   é exatamente o caso de uma chapa deitada indo para folha em pé;

@@ -37,3 +37,16 @@ def test_tint_transform_uma_tinta():
 def test_tint_transform_duas_tintas():
     saida = _tint_transform(["M", "K"])
     assert "roll" in saida and saida.count("pop") == 2
+
+
+def test_etiqueta_por_formato():
+    from finart_ctp.processador import rotulo_prova
+    assert rotulo_prova(510, 400) == "SOLIDA F4"
+    assert rotulo_prova(400, 510) == "SOLIDA F4"      # deitado, mesmo formato
+    assert rotulo_prova(775, 635) == "SOLIDA F2"
+    assert rotulo_prova(635, 775) == "SOLIDA F2"
+
+
+def test_etiqueta_vazia_para_formato_desconhecido():
+    from finart_ctp.processador import rotulo_prova
+    assert rotulo_prova(300, 200) == ""
