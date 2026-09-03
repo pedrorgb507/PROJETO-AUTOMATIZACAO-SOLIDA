@@ -81,3 +81,61 @@ def nome_saida(nome_original, sufixo_formato, indice=0, total=1):
 
     nome = PROIBIDOS.sub("", nome)
     return re.sub(r"\s+", " ", nome).strip()
+
+
+# ======================================================================
+# VOPRIX
+# ======================================================================
+# Os arquivos vem em .cdr, ja montados no tamanho da chapa, e o nome
+# segue outro padrao:
+#
+#     Envelope_Saco_23x31,5_Colegio_Unus.cdr
+#     ^^^^^^^^^^^^^ ^^^^^^^ ^^^^^^^^^^^^
+#       produto      medida     cliente
+#
+# O que vai para o CTP e o produto - o pedaco ANTES da medida - porque e
+# por ele que se identifica a chapa na hora de gravar.
+#
+#     510x400_CM_VOPRIX_Envelope_Saco
+
+MEDIDA = re.compile(r"^\d+(?:[.,]\d+)?(?:x\d+(?:[.,]\d+)?)+$", re.IGNORECASE)
+
+
+def resumo_voprix(nome):
+    """
+    'Envelope_Saco_23x31,5_Colegio_Unus.cdr' -> 'Envelope_Saco'
+
+    Tudo que vem antes da primeira medida do nome. Sem medida nenhuma,
+    devolve o nome inteiro sem extensao.
+    """
+    base = os.path.splitext(os.path.basename(nome))[0]
+    partes = base.split("_")
+    for i, parte in enumerate(partes):
+        if MEDIDA.match(parte):
+            return "_".join(partes[:i]) or base
+    return base
+
+
+def cores_no_nome(tintas):
+    """{'M','C'} -> 'CM'. Cor especial entra depois das quatro de escala."""
+    escala = [c for c in "CMYK" if c in tintas]
+    especiais = [t for t in sorted(tintas) if t not in "CMYK"]
+    return "".join(escala + especiais)
+
+
+def nome_saida_voprix(nome_original, formato, tintas, indice=0, total=1):
+    """
+    Nome (sem .pdf) do PDF que vai para o CTP.
+
+    >>> nome_saida_voprix("Envelope_Saco_23x31,5_Colegio_Unus.cdr",
+    ...                   "510x400", {"C", "M"})
+    '510x400_CM_VOPRIX_Envelope_Saco'
+
+    Com mais de uma pagina, o numero vai no fim: '... 01', '... 02'.
+    """
+    nome = "%s_%s_VOPRIX_%s" % (formato, cores_no_nome(tintas) or "K",
+                                resumo_voprix(nome_original))
+    if total > 1:
+        nome += " %02d" % (indice + 1)
+    nome = PROIBIDOS.sub("", nome)
+    return re.sub(r"\s+", " ", nome).strip()
