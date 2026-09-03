@@ -22,6 +22,15 @@ BASE_ENTRADA = r"X:\ENTRADA"
 BASE_CTP = r"Y:\CTP"
 SUBPASTA_SAIDA = "FIA"
 
+# PONTE COM O TEAMS (temporaria)
+# O operador baixa o anexo no Teams, cai em Downloads, e o programa leva
+# para a pasta do dia. So mexe em PDF cujo nome comeca com o numero da OS
+# seguido de " - ", para nao encostar em boleto, planilha ou instalador.
+# Sao 5 a 8 digitos de proposito: com 4 um "2026 - relatorio.pdf" entraria.
+PASTA_DOWNLOADS = r"C:\Users\SEU_USUARIO\Downloads"
+PADRAO_SERVICO = r"^\d{5,8}(\s+\d{5,8})*\s*-\s"
+MOVER_DO_DOWNLOADS = True      # False = copia e deixa o original la
+
 # Log, registro e arquivos temporarios ficam no PC. Os TIFFs da
 # separacao chegam a varios GB: nao podem passar pela rede.
 PASTA_CONTROLE = r"C:\CTP\_controle"
