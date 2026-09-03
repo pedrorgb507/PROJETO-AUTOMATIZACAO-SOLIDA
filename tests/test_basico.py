@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Testes rapidos: rode com  pytest  na raiz do projeto."""
 
+import pytest
+
 from finart_ctp.pdf_builder import _tint_transform
 from finart_ctp.processador import identificar_formato
 from finart_ctp.utils import normalizar
@@ -50,3 +52,39 @@ def test_etiqueta_por_formato():
 def test_etiqueta_vazia_para_formato_desconhecido():
     from finart_ctp.processador import rotulo_prova
     assert rotulo_prova(300, 200) == ""
+
+
+def test_arquivo_gigante_vira_pendencia(monkeypatch, tmp_path):
+    """Nao processa, nao imprime, e avisa: e o caso do PDF de 2,2 GB."""
+    import finart_ctp.processador as P
+
+    grande = tmp_path / "49999 - Cliente - cartaz.pdf"
+    grande.write_bytes(b"%PDF-1.4 nem precisa ser valido")
+
+    monkeypatch.setattr(P, "TAMANHO_MAXIMO_MB", 0)          # tudo e gigante
+    avisos = []
+    monkeypatch.setattr(P, "anotar_pendencia",
+                        lambda arq, motivo: avisos.append((arq, motivo)))
+    monkeypatch.setattr(P, "log", lambda *a, **k: None)
+    monkeypatch.setattr(P, "imprimir",
+                        lambda *a, **k: pytest.fail("nao pode imprimir"))
+
+    r = P.processar(str(grande), str(tmp_path / "saida"))
+
+    assert r["status"] == "erro"
+    assert "gigante" in r["motivo"]
+    assert len(avisos) == 1 and "gigante" in avisos[0][1]
+
+
+def test_arquivo_dentro_do_limite_nao_e_barrado(monkeypatch, tmp_path):
+    import finart_ctp.processador as P
+
+    pequeno = tmp_path / "49999 - Cliente - cartaz.pdf"
+    pequeno.write_bytes(b"%PDF-1.4")
+    monkeypatch.setattr(P, "TAMANHO_MAXIMO_MB", 500)
+    monkeypatch.setattr(P, "anotar_pendencia", lambda *a: None)
+    monkeypatch.setattr(P, "log", lambda *a, **k: None)
+
+    r = P.processar(str(pequeno), str(tmp_path / "saida"))
+    # passa do limite e falha adiante, na leitura do PDF - nao por tamanho
+    assert "gigante" not in r["motivo"]

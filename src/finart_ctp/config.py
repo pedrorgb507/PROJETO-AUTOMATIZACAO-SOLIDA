@@ -54,6 +54,12 @@ ROTULOS_PROVA = {
 # dentro da PASTA_CONTROLE, aqui no PC.
 REGISTRO = "_processados.json"
 
+# Acima disso o arquivo nao e processado: vira pendencia com aviso na
+# tela. Nasceu de um .cdr de 375 MB que a Corel exportou como um PDF de
+# 2,2 GB - tamanho que trava a leitura do arquivo e inviabiliza gerar a
+# chapa. Ajuste se a maquina aguentar mais.
+TAMANHO_MAXIMO_MB = 500
+
 # PASSO 1 DO PROCESSO: cada arte aceita sai impressa (o arquivo ORIGINAL,
 # nao a chapa) antes das chapas serem geradas. A chapa e maior que o papel
 # da impressora, entao a prova sai reduzida, em A4 retrato.

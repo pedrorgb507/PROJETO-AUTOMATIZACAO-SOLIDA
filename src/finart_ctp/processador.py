@@ -15,7 +15,7 @@ import time
 
 from .config import (FORMATOS, IMPRESSORA, IMPRIMIR_ORIGINAL,
                      NOMES_TINTA, PASTA_CONTROLE, ROTULOS_PROVA,
-                     TOLERANCIA_MM)
+                     TAMANHO_MAXIMO_MB, TOLERANCIA_MM)
 from .ghostscript import separar_tintas, tintas_por_pagina
 from .prova import imprimir
 from .nomes import extrair_oss, nome_saida
@@ -110,6 +110,12 @@ def processar(caminho, pasta_saida):
         resultado["status"] = "erro"
         resultado["motivo"] = motivo
         return resultado
+
+    mb = os.path.getsize(caminho) / 1048576
+    if mb > TAMANHO_MAXIMO_MB:
+        return falhar("arquivo gigante: %.0f MB, acima do limite de %d MB. "
+                      "Nao processei - precisa ser tratado a mao"
+                      % (mb, TAMANHO_MAXIMO_MB))
 
     if not extrair_oss(nome):
         return falhar("nao achei numero de OS no nome")
