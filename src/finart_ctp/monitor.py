@@ -18,7 +18,7 @@ from .utils import (arquivo_estavel, carregar_registro, chave_arquivo,
 def pastas_do_dia():
     r"""
     (entrada, saida) de hoje, ou (None, None) se a pasta de entrada ainda
-    nao existe. A saida e <BASE_CTP>\<MES>\<DIA>\IA.
+    nao existe. A saida e <BASE_CTP>\<MES>\<DIA>\FIA.
     """
     mes = localizar_pasta_mes(BASE_ENTRADA)
     if not mes:

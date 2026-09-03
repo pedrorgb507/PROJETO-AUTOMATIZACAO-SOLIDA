@@ -16,11 +16,11 @@ sobrescreve o que estiver aqui (veja o final do arquivo).
 BASE_ENTRADA = r"X:\ENTRADA"
 
 # Onde os PDFs prontos do CTP sao gravados:
-#   Y:\CTP\SETEMBRO\02\IA
+#   Y:\CTP\SETEMBRO\03\FIA
 # O programa acha a pasta do mes e do dia e cria a subpasta de saida
 # dentro dela, do lado das pastas dos outros operadores.
 BASE_CTP = r"Y:\CTP"
-SUBPASTA_SAIDA = "IA"
+SUBPASTA_SAIDA = "FIA"
 
 # Log, registro e arquivos temporarios ficam no PC. Os TIFFs da
 # separacao chegam a varios GB: nao podem passar pela rede.

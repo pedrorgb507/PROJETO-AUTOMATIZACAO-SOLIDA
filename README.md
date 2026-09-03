@@ -13,10 +13,10 @@ O controle do que já foi feito fica num `_processados.json` no próprio PC.
 | | |
 |---|---|
 | Entrada | `X:\ENTRADA\<MÊS>\<DIA>` — ex.: `X:\ENTRADA\SETEMBRO\02` |
-| Saída | `Y:\CTP\<MÊS>\<DIA>\IA` — ex.: `Y:\CTP\SETEMBRO\02\IA` |
+| Saída | `Y:\CTP\<MÊS>\<DIA>\FIA` — ex.: `Y:\CTP\SETEMBRO\03\FIA` |
 | Controle | `C:\CTP\_controle` — log e registro ficam no PC, fora da rede |
 
-A pasta `IA` fica ao lado das dos outros operadores (uma pasta por operador)
+A pasta `FIA` fica ao lado das dos outros operadores (uma pasta por operador)
 e é criada sozinha todo dia. O nome do mês é encontrado como está escrito no
 servidor — `MARÇO`, `Marco`, `Fevereiro` e `FEVEREIRO` são a mesma pasta.
 
@@ -103,7 +103,7 @@ finart-ctp/
 
    ```python
    BASE_ENTRADA = r"V:\PASTA DO CLIENTE"     # dentro dela: MES\DIA
-   BASE_CTP = r"W:\CTP"                      # saída: MES\DIA\IA
+   BASE_CTP = r"W:\CTP"                      # saída: MES\DIA\FIA
    PASTA_CONTROLE = r"C:\CTP\_controle"      # log, registro e temporários
    IMPRESSORA = "NOME EXATO NO WINDOWS"      # veja em Impressoras e scanners
    ```
@@ -141,4 +141,4 @@ python -m pytest -q
 
 - `C:\CTP\_controle\_log_ctp.txt` — tudo que aconteceu, com hora
 - `C:\CTP\_controle\_processados.json` — o que já foi feito
-- `Y:\CTP\<MÊS>\<DIA>\IA\_PENDENCIAS.txt` — o que não deu para processar e por quê
+- `Y:\CTP\<MÊS>\<DIA>\FIA\_PENDENCIAS.txt` — o que não deu para processar e por quê
