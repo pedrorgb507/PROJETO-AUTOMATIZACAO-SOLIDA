@@ -8,33 +8,25 @@ from datetime import datetime
 
 from .config import (BASE_CTP, BASE_ENTRADA, ESPERA_IMPRESSORA,
                      IMPRESSORA, INTERVALO, PASTA_CONTROLE,
-                     PASTA_DOWNLOADS, SUBPASTA_SAIDA)
-from .downloads import pendentes, recolher
+                     SUBPASTA_SAIDA)
 from .ghostscript import GS
 from .processador import processar
 from .utils import (arquivo_estavel, carregar_registro, chave_arquivo,
                     localizar_pasta_mes, log, pasta_do_dia, salvar_registro)
 
 
-def pastas_do_dia(criar_entrada=False):
+def pastas_do_dia():
     r"""
     (entrada, saida) de hoje, ou (None, None) se a pasta de entrada ainda
     nao existe. A saida e <BASE_CTP>\<MES>\<DIA>\FIA.
-
-    criar_entrada=True cria a pasta do dia do lado do cliente. So use
-    quando ha arquivo esperando em Downloads para ser entregue: fora
-    disso o programa nao cria nada na pasta compartilhada.
     """
-    mes = localizar_pasta_mes(BASE_ENTRADA, criar=criar_entrada)
+    mes = localizar_pasta_mes(BASE_ENTRADA)
     if not mes:
         return None, None
     dia = pasta_do_dia()
     entrada = os.path.join(BASE_ENTRADA, mes, dia)
     if not os.path.isdir(entrada):
-        if not criar_entrada:
-            return None, None
-        os.makedirs(entrada, exist_ok=True)
-        log("Criei a pasta do dia na entrada: %s" % entrada, alerta=True)
+        return None, None
     # o CTP tem a propria arvore de meses, escrita do jeito dele
     mes_ctp = localizar_pasta_mes(BASE_CTP, criar=True)
     saida = os.path.join(BASE_CTP, mes_ctp, dia, SUBPASTA_SAIDA)
@@ -51,9 +43,6 @@ def varrer(entrada, saida, registro, espera=None):
     espera = {"ate": 0, "avisado": False} if espera is None else espera
     if time.time() < espera["ate"]:
         return 0
-
-    # PASSO 0: o que o operador baixou do Teams entra na pasta do dia
-    recolher(entrada)
 
     feitos = 0
     for nome in sorted(os.listdir(entrada)):
@@ -119,7 +108,6 @@ def main():
     log("Entrada: %s" % BASE_ENTRADA)
     log("Saida:   %s" % BASE_CTP)
     log("Os originais NAO sao movidos. Controle em %s" % PASTA_CONTROLE)
-    log("Downloads vigiado: %s" % PASTA_DOWNLOADS)
     log("Deixe esta janela aberta. Ctrl+C para parar.")
 
     registro = carregar_registro()
@@ -129,8 +117,7 @@ def main():
     ultima = None
     while True:
         try:
-            # se ha download esperando, vale criar a pasta do dia
-            entrada, saida = pastas_do_dia(criar_entrada=bool(pendentes()))
+            entrada, saida = pastas_do_dia()
             if not entrada:
                 if ultima != "sem_pasta":
                     ultima = "sem_pasta"
