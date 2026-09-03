@@ -29,18 +29,18 @@ Enquanto o download direto do Teams não existe, o caminho é:
 3. dali em diante é o processo normal
 
 Downloads é uma pasta pessoal, então o filtro é restrito de propósito: só
-entra PDF cujo nome **começa com a OS de 5 a 8 dígitos seguida de **,
-como . Boleto, planilha, instalador e
-qualquer outro PDF ficam onde estão — inclusive um ,
+entra PDF cujo nome **começa com a OS de 5 a 8 dígitos seguida de `" - "`**,
+como `49635 - Cliente - santinhos.pdf`. Boleto, planilha, instalador e
+qualquer outro PDF ficam onde estão — inclusive um `2026 - relatorio.pdf`,
 que é o motivo de exigir 5 dígitos e não 4.
 
-Também trata os casos chatos: download pela metade () é
-ignorado, o  que o navegador acrescenta é removido do nome, e um
-arquivo diferente com nome já existente entra como  em vez de
+Também trata os casos chatos: download pela metade (`.crdownload`) é
+ignorado, o `(1)` que o navegador acrescenta é removido do nome, e um
+arquivo diferente com nome já existente entra como `_v2` em vez de
 sobrescrever.
 
-Para desligar a ponte, aponte  para uma pasta vazia.
-Para copiar em vez de mover, .
+Para desligar a ponte, aponte `PASTA_DOWNLOADS` para uma pasta vazia.
+Para copiar em vez de mover, `MOVER_DO_DOWNLOADS = False`.
 
 ## Passo 1: prova impressa
 
