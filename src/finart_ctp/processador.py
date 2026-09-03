@@ -94,7 +94,7 @@ def processar(caminho, pasta_saida):
 
     def falhar(motivo):
         log("%s: %s" % (nome, motivo), alerta=True)
-        anotar_pendencia(pasta_saida, nome, motivo)
+        anotar_pendencia(nome, motivo)
         resultado["status"] = "erro"
         resultado["motivo"] = motivo
         return resultado
@@ -140,7 +140,7 @@ def processar(caminho, pasta_saida):
             motivo = ("pagina %d: %.0f x %.0f mm nao bate com nenhum formato"
                       % (i + 1, larg, alt))
             log("   " + motivo, alerta=True)
-            anotar_pendencia(pasta_saida, nome, motivo)
+            anotar_pendencia(nome, motivo)
             problemas.append(motivo)
             continue
 
@@ -153,7 +153,7 @@ def processar(caminho, pasta_saida):
             aviso = ("ja existe %s.pdf (outra arte com a mesma OS); "
                      "este saiu como _v2" % base)
             log("   ATENCAO: " + aviso, alerta=True)
-            anotar_pendencia(pasta_saida, nome, aviso)
+            anotar_pendencia(nome, aviso)
 
         inicio = time.time()
         try:
@@ -162,7 +162,7 @@ def processar(caminho, pasta_saida):
         except Exception as e:
             motivo = "pagina %d: %s" % (i + 1, e)
             log("   FALHOU: %s" % motivo, alerta=True)
-            anotar_pendencia(pasta_saida, nome, motivo)
+            anotar_pendencia(nome, motivo)
             problemas.append(motivo)
             continue
 

@@ -79,16 +79,41 @@ def log(msg, alerta=False):
         pass
 
 
-def anotar_pendencia(pasta, arquivo, motivo):
-    """Escreve o problema no _PENDENCIAS.txt da pasta de saida do dia."""
+def anotar_pendencia(arquivo, motivo):
+    """
+    Registra um problema que precisa de gente.
+
+    Fica no PC, junto do log, e NAO na pasta do CTP: la so entram as
+    chapas. Alem de gravar, imprime um aviso grande na tela, para nao
+    passar batido em quem esta olhando a janela do programa.
+    """
+    barra = "!" * 66
+    print("")
+    print(barra, flush=True)
+    print("!!!  PENDENCIA - PRECISA DE VOCE", flush=True)
+    print("!!!  arquivo: %s" % arquivo, flush=True)
+    print("!!!  motivo : %s" % motivo, flush=True)
+    print(barra, flush=True)
+    print("")
+    log("PENDENCIA: %s | %s" % (arquivo, motivo), alerta=True)
     try:
-        os.makedirs(pasta, exist_ok=True)
-        with open(os.path.join(pasta, "_PENDENCIAS.txt"), "a",
+        os.makedirs(PASTA_CONTROLE, exist_ok=True)
+        with open(os.path.join(PASTA_CONTROLE, "_PENDENCIAS.txt"), "a",
                   encoding="utf-8") as f:
-            f.write("%s | %s | %s\n"
-                    % (datetime.now().strftime("%d/%m %H:%M"), arquivo, motivo))
+            f.write("%s | %s | %s" % (datetime.now().strftime("%d/%m %H:%M"),
+                                      arquivo, motivo) + chr(10))
     except Exception:
         pass
+
+
+def pendencias_abertas(limite=20):
+    """Ultimas pendencias anotadas, a mais recente por ultimo."""
+    try:
+        with open(os.path.join(PASTA_CONTROLE, "_PENDENCIAS.txt"),
+                  encoding="utf-8") as f:
+            return [l.strip() for l in f if l.strip()][-limite:]
+    except OSError:
+        return []
 
 
 # ----------------------------------------------------------------------

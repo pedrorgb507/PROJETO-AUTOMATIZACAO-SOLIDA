@@ -163,4 +163,18 @@ python -m pytest -q
 
 - `C:\CTP\_controle\_log_ctp.txt` — tudo que aconteceu, com hora
 - `C:\CTP\_controle\_processados.json` — o que já foi feito
-- `Y:\CTP\<MÊS>\<DIA>\FIA\_PENDENCIAS.txt` — o que não deu para processar e por quê
+- `C:\CTP\_controle\_PENDENCIAS.txt` — o que precisa de gente
+
+A pasta do CTP na rede recebe **só as chapas**, nada de arquivo de controle.
+
+Quando algo precisa de atenção humana — tamanho fora do padrão, duas artes
+com a mesma OS, PDF ilegível —, o programa para de ser discreto e imprime
+na tela:
+
+```
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!  PENDENCIA - PRECISA DE VOCE
+!!!  arquivo: 49638 - Cliente - vouchers.pdf
+!!!  motivo : ja existe 49638.pdf (outra arte com a mesma OS)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+```
