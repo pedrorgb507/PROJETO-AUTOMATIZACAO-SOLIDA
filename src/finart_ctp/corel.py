@@ -25,6 +25,8 @@ preco combinado de dividir a maquina.
 
 import os
 
+from .config import PDF_CORELDRAW
+
 PROGID = "CorelDRAW.Application"
 
 
@@ -64,6 +66,28 @@ def _documento_aberto(app, caminho):
     return None
 
 
+def ajustar_pdf(doc):
+    """
+    Exige do CorelDRAW os ajustes do PDF_CORELDRAW, em vez de herdar.
+
+    O PublishToPDF usa o que estiver marcado na janela de Publicar em PDF
+    da maquina - e o que estava marcado gravava bitmap CRU: um .cdr de
+    13 MB virou PDF de 1007 MB, sendo 1006 MB de imagem sem compactar.
+
+    Devolve o que NAO deu para ajustar, para o chamador avisar. Versao de
+    Corel diferente pode nao ter alguma dessas propriedades, e isso nao e
+    motivo para deixar de converter.
+    """
+    ajustes = doc.PDFSettings
+    faltaram = []
+    for nome, valor in PDF_CORELDRAW.items():
+        try:
+            setattr(ajustes, nome, valor)
+        except Exception:
+            faltaram.append(nome)
+    return faltaram
+
+
 def publicar_pdf(cdr, destino):
     """
     Abre o .cdr e publica em PDF. Devolve o caminho do PDF.
@@ -82,6 +106,7 @@ def publicar_pdf(cdr, destino):
 
     doc = app.OpenDocument(cdr)
     try:
+        ajustar_pdf(doc)
         doc.PublishToPDF(destino)
     finally:
         try:

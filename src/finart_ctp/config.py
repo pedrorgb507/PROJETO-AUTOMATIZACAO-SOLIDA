@@ -68,6 +68,55 @@ BASE_ENTRADA_VOPRIX = r"X:\VOPRIX"
 BASE_ENTRADA_FIALHO = r"X:\FIALHO"
 
 # ----------------------------------------------------------------------
+# COMO O CORELDRAW DEVE PUBLICAR O PDF
+# ----------------------------------------------------------------------
+# O PublishToPDF nao escolhe nada sozinho: ele usa o que estiver marcado
+# na janela de Publicar em PDF da maquina. E o que estava marcado era:
+#
+#     BitmapCompression   0      (nenhuma)
+#     CompressText        False
+#     DownsampleColor     False  <- com ColorResolution ja em 300, sem uso
+#
+# Ou seja, bitmap gravado CRU. Foi medido: um .cdr de 13 MB virou PDF de
+# 1007 MB, e 1006 desses MB eram bitmap sem compactar. Nao e defeito da
+# automacao - publicando pela janela da o mesmo, so que na mao o arquivo
+# passa pelo Photoshop depois e ninguem ve o monstro do meio.
+#
+# Entao o programa passou a EXIGIR os ajustes, em vez de herdar:
+#
+# Sao dois ajustes, e os dois sao SEM PERDA: ZIP nos bitmaps e compressao
+# nos comandos da pagina. Medido no Panfleto_M3RIN, o mesmo arquivo:
+#
+#     como estava        1007,5 MB
+#     so ZIP               39,6 MB   <- 25x menor
+#
+# E o que sai e o MESMO arquivo: cobertura de tinta igual na quinta casa
+# (C, M, Y e K com diferenca +0.00000) e a pagina rasterizada com
+# 7.114.344 de 7.114.344 pixels identicos, diferenca maxima 0 de 255.
+#
+# NAO reamostramos, e isso foi decidido com numero na mesa. As imagens do
+# cliente vem em ~1064 dpi no tamanho final, o que e mais do que a chapa
+# grava (1000 dpi) e mais do que o offset usa (300-400). So que:
+#
+#   ZIP + 800 dpi   50,9 MB   MAIOR que sem reamostrar - a interpolacao
+#                             inventa valores que comprimem pior
+#   ZIP + 600 dpi   42,2 MB   idem
+#   ZIP + 400 dpi   32,5 MB   7 MB a menos, e o QR CODE do panfleto sai
+#                             borrado. Traco fino dentro do bitmap e o
+#                             que quebra primeiro.
+#
+# Ou seja: reamostrar aqui custa qualidade e nao paga nada. A compressao
+# ja faz o trabalho inteiro. Se um dia um arquivo passar do limite mesmo
+# com ZIP, ai sim vale conversar sobre dpi - e olhando o QR code.
+#
+# Numeros do BitmapCompression, direto do CorelDRAW:
+#   0 nenhuma   1 LZW   2 JPEG (com perda)   3 ZIP   4 JP2
+PDF_CORELDRAW = {
+    "BitmapCompression": 3,        # pdfZIP, sem perda
+    "CompressText": True,
+}
+
+# ----------------------------------------------------------------------
 # FORMATOS ACEITOS
 # ----------------------------------------------------------------------
 # (largura_mm, altura_mm): (dpi, sufixo_no_nome)

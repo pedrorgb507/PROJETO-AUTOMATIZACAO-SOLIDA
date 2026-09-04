@@ -505,3 +505,54 @@ def test_solida_de_uma_cor_continua_fechando(monkeypatch, tmp_path):
     r = _roda(tmp_path, nome="49700 - Cliente - timbrado.pdf",
               cliente=P.SOLIDA)
     assert r["status"] == "ok" and feito["base"] == "49700"
+
+
+# ----------------------------------------------------------------------
+# O que o programa exige do CorelDRAW ao publicar
+# ----------------------------------------------------------------------
+
+def test_ajustes_do_pdf_sao_exigidos_e_nao_herdados(monkeypatch):
+    """
+    A janela do Corel estava com compressao NENHUMA, e um .cdr de 13 MB
+    virava PDF de 1007 MB. O programa nao pode depender do que esta
+    marcado na maquina.
+    """
+    import finart_ctp.corel as CO
+
+    class Ajustes(object):
+        pass
+
+    class Documento(object):
+        PDFSettings = Ajustes()
+
+    doc = Documento()
+    assert CO.ajustar_pdf(doc) == []            # nada faltou
+    assert doc.PDFSettings.BitmapCompression == 3     # pdfZIP, sem perda
+    assert doc.PDFSettings.CompressText is True
+
+
+def test_nao_reamostra_a_imagem_do_cliente():
+    """
+    Reamostrar borra QR code e nao paga: com ZIP o arquivo ja cai 25x, e
+    em 800 dpi ele ate engorda.
+    """
+    from finart_ctp.config import PDF_CORELDRAW
+
+    for ajuste in ("DownsampleColor", "DownsampleGray", "DownsampleMono"):
+        assert not PDF_CORELDRAW.get(ajuste), (
+            "%s ligado: isso mexe na imagem do cliente" % ajuste)
+
+
+def test_corel_de_outra_versao_nao_impede_a_conversao(monkeypatch):
+    """Propriedade que nao existe e avisada, nao derruba o servico."""
+    import finart_ctp.corel as CO
+
+    class Recusa(object):
+        def __setattr__(self, nome, valor):
+            raise AttributeError(nome)
+
+    class Documento(object):
+        PDFSettings = Recusa()
+
+    faltaram = CO.ajustar_pdf(Documento())
+    assert sorted(faltaram) == sorted(CO.PDF_CORELDRAW)

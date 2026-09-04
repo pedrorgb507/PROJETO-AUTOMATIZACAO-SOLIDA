@@ -62,9 +62,41 @@ Não vira pendência e não entra no registro — nada se perde.
 O operador vai ver o arquivo piscar na tela durante a conversão. É o preço
 combinado de dividir a máquina.
 
-Se o PDF que a Corel devolver passar do limite de tamanho, o arquivo vira
-pendência sem gerar chapa: foi o caso do `.cdr` de 375 MB que saiu como um PDF
-de 2,2 GB.
+### O programa exige os ajustes do PDF, não herda
+
+O `PublishToPDF` usa o que estiver marcado na janela de *Publicar em PDF* da
+máquina — e o que estava marcado era **compressão nenhuma**. Um `.cdr` de 13 MB
+virava um PDF de **1007 MB**, dos quais 1006 MB eram bitmap gravado cru.
+
+Não era defeito da automação: publicando pela janela dá o mesmo. Na mão o
+arquivo passa pelo Photoshop depois, e ninguém vê o monstro do meio.
+
+Agora o programa exige dois ajustes, e os dois são **sem perda**:
+
+| | Medido no mesmo arquivo |
+|---|---|
+| como estava | 1007,5 MB |
+| **`BitmapCompression = ZIP` + `CompressText`** | **39,6 MB — 25× menor** |
+
+E o que sai é o mesmo arquivo: cobertura de tinta igual na quinta casa
+(`+0.00000` nas quatro) e a página rasterizada com **7.114.344 de 7.114.344
+pixels idênticos**, diferença máxima 0 de 255.
+
+**Não reamostramos**, e isso foi decidido com número na mesa. As imagens do
+cliente chegam em ~1064 dpi no tamanho final — mais do que a chapa grava (1000
+dpi) e mais do que o offset usa (300–400). Mesmo assim:
+
+- ZIP + 800 dpi dá **50,9 MB**, *maior* que sem reamostrar — a interpolação
+  inventa valores que comprimem pior;
+- ZIP + 600 dpi dá 42,2 MB;
+- ZIP + 400 dpi dá 32,5 MB, e o **QR code do panfleto sai borrado**. Traço fino
+  dentro do bitmap é o que quebra primeiro.
+
+Reamostrar aqui custa qualidade e não paga nada. Os ajustes ficam em
+`PDF_CORELDRAW`, no `config.py`.
+
+Se ainda assim o PDF passar do limite de tamanho, o arquivo vira pendência sem
+gerar chapa — foi o caso do `.cdr` de 375 MB que saiu como um PDF de 2,2 GB.
 
 ## Passo 1: prova impressa
 
