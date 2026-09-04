@@ -267,19 +267,23 @@ def resumo_fialho(nome):
     return " ".join(principais) if principais else base
 
 
-def nome_saida_fialho(nome_original, formato, sequencia):
+def nome_saida_fialho(nome_original, formato, sequencia=None):
     """
     Nome (sem .pdf) da chapa que vai para o CTP.
 
-    >>> nome_saida_fialho("FORRO AGENDA unicidades  2027.pdf", "510x400", 1)
-    '510x400_FIALHO_UNICIDADES 01'
+    >>> nome_saida_fialho("FORRO AGENDA unicidades  2027.pdf", "510x400")
+    '510x400_FIALHO_UNICIDADES'
+    >>> nome_saida_fialho("FORRO AGENDA unicidades  2027.pdf", "510x400", 2)
+    '510x400_FIALHO_UNICIDADES 02'
 
-    A sequencia e do DIA e do trabalho, nao do arquivo: as 11 chapas de
-    UNICIDADES de um dia saem 01 a 11 mesmo vindo de tres PDFs diferentes.
-    Quem conta e o processador, olhando a pasta de saida.
+    Sem sequencia, sem numero: chapa sozinha nao precisa ser numerada. O
+    numero e do DIA e do trabalho, nao do arquivo - as 11 chapas de
+    UNICIDADES de um dia saem 01 a 11 mesmo vindo de tres PDFs. Quem
+    conta e o processador, olhando a pasta de saida.
     """
-    nome = "%s_FIALHO_%s %02d" % (formato, resumo_fialho(nome_original),
-                                  sequencia)
+    nome = "%s_FIALHO_%s" % (formato, resumo_fialho(nome_original))
+    if sequencia is not None:
+        nome += " %02d" % sequencia
     return finalizar(nome)
 
 

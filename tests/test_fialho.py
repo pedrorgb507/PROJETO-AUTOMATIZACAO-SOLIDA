@@ -94,11 +94,50 @@ def test_sequencia_em_pasta_que_nem_existe(tmp_path):
     assert P.proxima_sequencia(str(tmp_path / "nao_existe"), "x") == 1
 
 
-def test_nome_da_chapa_usa_a_pasta_para_numerar(tmp_path):
-    (tmp_path / "510x400_FIALHO_UNICIDADES 01.pdf").write_bytes(b"x")
-    nome = P.nome_da_chapa(P.FIALHO, "INTRODUÇÃO  unicidades.pdf", "",
-                           510, 400, set("CMYK"), 0, 2, str(tmp_path))
-    assert nome == "510x400_FIALHO_UNICIDADES 02"
+def test_chapa_sozinha_nao_leva_numero(tmp_path):
+    """Numero so faz sentido quando ha mais de uma chapa com o mesmo nome."""
+    base = "510x400_FIALHO_PAULISTA"
+    novo, renumerada = P.numerar_se_preciso(str(tmp_path), base)
+    assert novo == base and renumerada is None
+
+
+def test_segunda_chapa_numera_as_duas(tmp_path):
+    """
+    Chegando a segunda, a primeira - ja gravada - vira 01 e a nova sai 02.
+    Uma com nome limpo e outra numerada esconderia que sao duas.
+    """
+    base = "510x400_FIALHO_UNICIDADES"
+    (tmp_path / (base + ".pdf")).write_bytes(b"primeira")
+
+    novo, renumerada = P.numerar_se_preciso(str(tmp_path), base)
+
+    assert novo == base + " 02"
+    assert renumerada == (base + ".pdf", base + " 01.pdf")
+    assert (tmp_path / (base + " 01.pdf")).read_bytes() == b"primeira"
+    assert not (tmp_path / (base + ".pdf")).exists()
+
+
+def test_terceira_continua_a_serie(tmp_path):
+    base = "510x400_FIALHO_UNICIDADES"
+    (tmp_path / (base + " 01.pdf")).write_bytes(b"a")
+    (tmp_path / (base + " 02.pdf")).write_bytes(b"b")
+
+    novo, renumerada = P.numerar_se_preciso(str(tmp_path), base)
+    assert novo == base + " 03" and renumerada is None
+
+
+def test_arquivo_de_varias_paginas_ja_nasce_numerado(tmp_path):
+    """Aqui se sabe, antes de gravar, que virao outras paginas."""
+    base = "730x600_FIALHO_SICOOB"
+    novo, renumerada = P.numerar_se_preciso(str(tmp_path), base, forcar=True)
+    assert novo == base + " 01" and renumerada is None
+
+
+def test_nome_da_chapa_do_fialho_sai_sem_numero():
+    """Quem numera e o laco, olhando a pasta - o nome sai limpo."""
+    assert (P.nome_da_chapa(P.FIALHO, "INTRODUÇÃO  unicidades.pdf", "",
+                            510, 400, set("CMYK"), 0, 2, None)
+            == "510x400_FIALHO_UNICIDADES")
 
 
 # ----------------------------------------------------------------------
@@ -215,7 +254,7 @@ def test_520x400_fecha_centralizado_na_510x400(monkeypatch, tmp_path):
                           "impresso": None}, lambda m: None)
 
     assert r["status"] == "ok"
-    assert feito["base"] == "510x400_FIALHO_PAULISTA 01"   # nome pela CHAPA
+    assert feito["base"] == "510x400_FIALHO_PAULISTA"      # nome pela CHAPA
     assert feito["chapa"] == (510, 400)                    # pagina do PDF
     assert feito["alvo"] == (20079, 15748)                 # 510x400 a 1000 dpi
 
@@ -294,7 +333,7 @@ def test_a_trava_de_cor_da_voprix_nao_pega_o_fialho(monkeypatch, tmp_path):
                          {"status": "ok", "saidas": [], "motivo": "",
                           "impresso": None}, lambda m: None)
 
-    assert r["status"] == "ok" and feitos == ["510x400_FIALHO_UNICIDADES 01"]
+    assert r["status"] == "ok" and feitos == ["510x400_FIALHO_UNICIDADES"]
 
 
 # ----------------------------------------------------------------------

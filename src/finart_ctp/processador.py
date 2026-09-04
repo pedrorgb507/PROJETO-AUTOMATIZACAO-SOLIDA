@@ -249,6 +249,43 @@ def resolver_modelo(pasta_saida, base):
     return base, None
 
 
+def numerar_se_preciso(pasta_saida, base, forcar=False):
+    """
+    (nome_a_usar, renomeada) - o numero so entra quando ha mais de uma.
+
+    Chapa sozinha nao leva numero: '510x400_FIALHO_PAULISTA', e nao
+    '... 01'. Quando aparece a segunda, a primeira - que JA ESTA GRAVADA -
+    e renomeada para ' 01' e a nova sai ' 02', igual ao MODELO da VOPRIX:
+    uma com nome limpo e outra numerada esconderia que sao duas.
+
+    forcar=True numera desde a primeira. E o arquivo de varias paginas,
+    onde ja se sabe, antes de gravar, que virao outras.
+
+    'renomeada' e (de, para) quando houve renomeacao, ou None.
+    """
+    padrao = re.compile(r"^%s (\d+)\.pdf$" % re.escape(base), re.IGNORECASE)
+    maior = 0
+    try:
+        for nome in os.listdir(pasta_saida):
+            achou = padrao.match(nome)
+            if achou:
+                maior = max(maior, int(achou.group(1)))
+    except OSError:
+        pass
+
+    if maior:                                   # a serie ja existe
+        return "%s %02d" % (base, maior + 1), None
+
+    limpo = os.path.join(pasta_saida, base + ".pdf")
+    if os.path.exists(limpo):
+        primeiro = "%s 01" % base
+        os.replace(limpo, os.path.join(pasta_saida, primeiro + ".pdf"))
+        renomear_saida_no_registro(base + ".pdf", primeiro + ".pdf")
+        return "%s 02" % base, (base + ".pdf", primeiro + ".pdf")
+
+    return ("%s 01" % base if forcar else base), None
+
+
 def nome_da_chapa(cliente, nome, sufixo, larg, alt, tintas, indice, total,
                   pasta_saida=None):
     """Nome de saida (sem .pdf), pela regra do cliente."""
@@ -259,11 +296,10 @@ def nome_da_chapa(cliente, nome, sufixo, larg, alt, tintas, indice, total,
         return nome_saida_emporio(nome, formato_no_nome(larg, alt, cliente),
                                   tintas, indice, total)
     if cliente == FIALHO:
-        formato = formato_no_nome(larg, alt, cliente)
-        prefixo = "%s_FIALHO_%s" % (formato, resumo_fialho(nome))
-        seq = (proxima_sequencia(pasta_saida, prefixo) if pasta_saida
-               else indice + 1)
-        return nome_saida_fialho(nome, formato, seq)
+        # o numero entra no laco, olhando a pasta - so quando ha mais de
+        # uma chapa com o mesmo nome
+        return "%s_FIALHO_%s" % (formato_no_nome(larg, alt, cliente),
+                                 resumo_fialho(nome))
     return nome_saida(nome, sufixo or "", indice, total)
 
 
@@ -525,6 +561,18 @@ def _processar_pdf(pdf, nome, pasta_saida, cliente, resultado, falhar,
             anotar_pendencia(nome, motivo)
             problemas.append(motivo)
             continue
+
+        # No Fialho o numero so aparece quando ha mais de uma chapa com o
+        # mesmo nome. Arquivo de varias paginas ja nasce numerado.
+        if cliente == FIALHO:
+            base, renumerada = numerar_se_preciso(pasta_saida, base,
+                                                  forcar=total > 1)
+            if renumerada:
+                aviso = ("outra chapa ja tinha o nome %s: ela passou a se "
+                         "chamar %s e esta saiu como %s.pdf"
+                         % (renumerada[0], renumerada[1], base))
+                log("   ATENCAO: " + aviso, alerta=True)
+                anotar_pendencia(nome, aviso)
 
         # Duas artes diferentes com o mesmo nome de saida. Na VOPRIX as
         # duas viram MODELO; nos outros clientes segue o _v2 de sempre.

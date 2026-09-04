@@ -214,12 +214,29 @@ A lista de palavras que não contam está em `PALAVRAS_MATERIAL`, no `config.py`
 e **é para crescer**: quando uma chapa sair com nome errado, quase sempre a
 correção é acrescentar a palavra ali.
 
-### A numeração é do dia, não do arquivo
+### O número só entra quando há mais de uma
 
-`01`, `02`, `03`... contam por **trabalho e por dia**, não por arquivo. As 11
-chapas de UNICIDADES de um dia saem `01` a `11` mesmo vindo de três PDFs
-diferentes: antes de gravar, o programa olha a pasta de saída e continua de onde
-o dia parou.
+Chapa sozinha **não leva número**: sai `510x400_FIALHO_PAULISTA`, e não
+`... 01`. Numerar o que é único não ajuda ninguém.
+
+Quando aparece a segunda com o mesmo nome, as duas passam a ser numeradas — e a
+primeira, **que já está gravada, é renomeada** para ` 01`:
+
+```
+510x400_FIALHO_UNICIDADES.pdf      ->  510x400_FIALHO_UNICIDADES 01.pdf
+                                       510x400_FIALHO_UNICIDADES 02.pdf  ← a nova
+```
+
+É a mesma ideia do MODELO da VOPRIX: uma com nome limpo e outra numerada
+esconderia que são duas. O registro é acertado junto e o caso vai para o
+`_PENDENCIAS.txt`.
+
+Arquivo de **várias páginas já nasce numerado** (`01`, `02`), porque ali se sabe,
+antes de gravar, que virão outras.
+
+E a contagem é por **trabalho e por dia**, não por arquivo: as 11 chapas de
+UNICIDADES de um dia saem `01` a `11` mesmo vindo de três PDFs diferentes —
+antes de gravar, o programa olha a pasta de saída e continua de onde o dia parou.
 
 ## Formatos e dpi — SOLIDA e VOPRIX
 
