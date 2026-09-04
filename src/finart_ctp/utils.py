@@ -172,11 +172,35 @@ def carregar_registro():
 
 
 def salvar_registro(reg):
+    """
+    Grava o registro JUNTANDO com o que ja esta no disco.
+
+    Mais de um programa pode estar rodando na maquina ao mesmo tempo - o
+    operador com o F5 aberto e uma rodada avulsa, por exemplo. Cada um
+    carrega o registro ao subir e, gravando o proprio dicionario, apagava
+    o trabalho do outro.
+
+    Ja aconteceu: uma chapa fechada as 09:20 sumiu do registro as 09:49,
+    quando o outro programa salvou o dele. Na proxima varredura o arquivo
+    seria refeito - outra prova impressa e chapa duplicada na pasta.
+
+    Relendo antes de gravar, os dois lados se somam. Quem chamou recebe o
+    conjunto de volta, para nao seguir com uma lista velha na memoria.
+
+    CUIDADO: como junta, esta funcao NUNCA REMOVE. Apagar uma entrada -
+    para refazer um arquivo, por exemplo - e gravar o JSON direto, ou
+    apagar o _processados.json inteiro.
+    """
     try:
         os.makedirs(PASTA_CONTROLE, exist_ok=True)
+        completo = carregar_registro()      # o que outro programa gravou
+        completo.update(reg)                # o nosso e o mais novo
+        reg.clear()
+        reg.update(completo)
+
         tmp = caminho_registro() + ".tmp"
         with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(reg, f, ensure_ascii=False, indent=1)
+            json.dump(completo, f, ensure_ascii=False, indent=1)
         os.replace(tmp, caminho_registro())
     except OSError as e:
         log("Nao consegui gravar o registro: %s" % e, alerta=True)
