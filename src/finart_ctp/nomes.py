@@ -21,10 +21,28 @@ import os
 import re
 import unicodedata
 
-from .config import (PALAVRAS_MATERIAL, PALAVRAS_QUE_PEDEM_OLHO,
-                     PALAVRAS_SERVICO_EMPORIO)
+from .config import (MAXIMO_DESCRICAO_EMPORIO, PALAVRAS_MATERIAL,
+                     PALAVRAS_QUE_PEDEM_OLHO, PALAVRAS_SERVICO_EMPORIO)
 
 PROIBIDOS = re.compile(r'[\/:*?"<>|]')
+
+
+def sem_acento(texto):
+    """'INTRODUÇÃO' -> 'INTRODUCAO'. Mantem a caixa e os espacos."""
+    decomposto = unicodedata.normalize("NFKD", texto)
+    return "".join(c for c in decomposto if not unicodedata.combining(c))
+
+
+def finalizar(nome):
+    """
+    O acerto final de TODO nome de chapa, seja de que cliente for.
+
+    Sem acento e sem caractere que o Windows nao aceita. Acento em nome
+    de chapa e pedido de encrenca: o arquivo atravessa a rede, o RIP da
+    gravadora e o InDesign, e nem todos leem UTF-8 do mesmo jeito.
+    """
+    nome = PROIBIDOS.sub("", sem_acento(nome))
+    return re.sub(r"\s+", " ", nome).strip()
 
 
 def partes_do_nome(nome):
@@ -83,8 +101,7 @@ def nome_saida(nome_original, sufixo_formato, indice=0, total=1):
     if pag:
         nome += " " + pag
 
-    nome = PROIBIDOS.sub("", nome)
-    return re.sub(r"\s+", " ", nome).strip()
+    return finalizar(nome)
 
 
 # ======================================================================
@@ -194,8 +211,7 @@ def nome_saida_voprix(nome_original, formato, tintas, indice=0, total=1):
     nome = "%s_%s_VOPRIX_%s" % (formato, cores_no_nome(tintas) or "K", miolo)
     if total > 1:
         nome += " %02d" % (indice + 1)
-    nome = PROIBIDOS.sub("", nome)
-    return re.sub(r"\s+", " ", nome).strip()
+    return finalizar(nome)
 
 
 # ======================================================================
@@ -264,8 +280,7 @@ def nome_saida_fialho(nome_original, formato, sequencia):
     """
     nome = "%s_FIALHO_%s %02d" % (formato, resumo_fialho(nome_original),
                                   sequencia)
-    nome = PROIBIDOS.sub("", nome)
-    return re.sub(r"\s+", " ", nome).strip()
+    return finalizar(nome)
 
 
 # ======================================================================
@@ -302,7 +317,23 @@ def resumo_emporio(nome):
     palavras = [p for p in base.split(" ") if p]
     ficam = [p for p in palavras
              if limpo(p) not in PALAVRAS_SERVICO_EMPORIO]
-    return re.sub(r"\s+", " ", " ".join(ficam)).strip()
+    return encurtar(re.sub(r"\s+", " ", " ".join(ficam)).strip(),
+                    MAXIMO_DESCRICAO_EMPORIO)
+
+
+def encurtar(texto, teto):
+    """
+    Corta o texto no teto SEM partir palavra.
+
+    'Guia do Comprador com canhoto de entrega' em 25 vira 'Guia do
+    Comprador com' - e nao 'Guia do Comprador com can', que nao quer
+    dizer nada em nome de chapa.
+    """
+    if len(texto) <= teto:
+        return texto
+    corte = texto[:teto + 1]
+    espaco = corte.rfind(" ")
+    return (corte[:espaco] if espaco > 0 else texto[:teto]).strip()
 
 
 def pede_olho(nome):
@@ -332,5 +363,4 @@ def nome_saida_emporio(nome_original, formato, tintas, indice=0, total=1):
     nome = "_".join(partes)
     if total > 1:
         nome += "_%d" % (indice + 1)
-    nome = PROIBIDOS.sub("", nome)
-    return re.sub(r"\s+", " ", nome).strip()
+    return finalizar(nome)

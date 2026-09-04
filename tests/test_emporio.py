@@ -63,10 +63,34 @@ def test_etiqueta_da_prova():
 
 def test_descricao_sai_do_nome_sem_as_palavras_de_servico():
     assert resumo_emporio("01995 - CHAPA CAIXA 4796.pdf") == "CAIXA 4796"
-    assert (resumo_emporio("01970 - CHAPA - Pasta C Orelha Lab Clinico.pdf")
-            == "Pasta C Orelha Lab Clinico")
     assert (resumo_emporio("01929 - Regravar - 12 Modelos Caixas Cordial.pdf")
             == "12 Caixas Cordial")
+
+
+def test_descricao_comprida_e_cortada_sem_partir_palavra():
+    """
+    Teto de 25. Os operadores abreviam a mao ('Guia', 'CXBLANT') e isso
+    ninguem adivinha; o corte respeita a palavra.
+    """
+    d = resumo_emporio("01970 - CHAPA - Pasta C Orelha Lab Clinico Central.pdf")
+    assert d == "Pasta C Orelha Lab"
+    assert len(d) <= 25
+
+    d = resumo_emporio("01987 - CHAPA - ARTE Guia do Comprador com canhoto.pdf")
+    assert d == "Guia do Comprador com"
+
+
+def test_nome_de_chapa_nao_leva_acento():
+    """
+    Acento em nome de chapa e pedido de encrenca: o arquivo atravessa a
+    rede, o RIP e o InDesign, e nem todos leem UTF-8 igual.
+    """
+    assert (nome_saida_emporio("02040 - CHAPA - Cartão Mãe.pdf", "510x400",
+                               set("CMYK"))
+            == "510x400_CMYK_EMPORIO_02040_Cartao Mae")
+    assert (nome_saida_emporio("01987 - CHAPA - entrega descartável.pdf",
+                               "510x400", set("CMYK"))
+            == "510x400_CMYK_EMPORIO_01987_entrega descartavel")
 
 
 def test_verniz_fica_no_nome():

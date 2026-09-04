@@ -307,6 +307,15 @@ chapa (`CHAPA`, `ARTE`, `Regravar`, `MODELOS`) — a mesma ideia do nome princip
 do Fialho. A lista está em `PALAVRAS_SERVICO_EMPORIO`, no `config.py`. Página
 extra leva `_1`, `_2` no fim, que é como os operadores já escrevem.
 
+A descrição é cortada em **25 caracteres** (`MAXIMO_DESCRICAO_EMPORIO`), sem
+partir palavra: `Guia do Comprador com canhoto de entrega` sai `Guia do Comprador
+com`, e não `Guia do Comprador com can`. Os operadores abreviam à mão — `Guia`,
+`CXBLANT` — e isso não tem regra que se escreva; o teto é o meio termo.
+
+**Nome de chapa não leva acento**, em nenhum cliente: `descartável` sai
+`descartavel`. O arquivo atravessa a rede, o RIP da gravadora e o InDesign, e nem
+todos leem UTF-8 do mesmo jeito.
+
 **Verniz nunca fecha sozinho.** Se o nome do arquivo disser `VERNIZ`, o programa
 para e chama, mesmo estando tudo em ordem — pedido do operador. A palavra fica no
 nome da chapa de propósito, para não se perder na pasta. A lista está em

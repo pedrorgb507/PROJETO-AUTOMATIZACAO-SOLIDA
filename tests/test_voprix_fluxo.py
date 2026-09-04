@@ -641,3 +641,15 @@ def test_registro_acompanha_a_chapa_renomeada(tmp_path, monkeypatch):
     assert U.renomear_saida_no_registro("chapa.pdf", "chapa MODELO 1.pdf")
     assert U.carregar_registro()["k"]["saidas"] == ["chapa MODELO 1.pdf",
                                                     "outra.pdf"]
+
+
+def test_nome_da_voprix_tambem_perde_o_acento():
+    """A regra do acento vale para todo cliente, nao so para o Emporio."""
+    from finart_ctp.nomes import nome_saida_voprix
+
+    assert (nome_saida_voprix("Cartao_23x31_4_0_Otica_Sao_Joao.cdr",
+                              "510x400", set("CMYK"))
+            == "510x400_CMYK_VOPRIX_SAO_JOAO_cartao")
+    assert (nome_saida_voprix("Adesivo_15x21_1_0_Farmácia_Céu.cdr",
+                              "510x400", {"K"})
+            == "510x400_K_VOPRIX_FARMACIA_CEU_adesivo")

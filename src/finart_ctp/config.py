@@ -208,6 +208,12 @@ PALAVRAS_SERVICO_EMPORIO = {
     "FORMATO", "MODELO", "MODELOS", "GRADE",
 }
 
+# Ate quantos caracteres a descricao entra no nome. Os operadores
+# abreviam a mao - 'Guia', 'CXBLANT' - e isso ninguem adivinha; o teto e
+# o meio termo entre o nome deles e o titulo inteiro do arquivo. O corte
+# respeita a palavra: nao parte no meio.
+MAXIMO_DESCRICAO_EMPORIO = 25
+
 # Trabalho que NUNCA fecha sozinho, por mais que o resto esteja em ordem.
 # Pedido do operador: verniz se confere antes.
 PALAVRAS_QUE_PEDEM_OLHO = {"VERNIZ"}
