@@ -21,7 +21,8 @@ import os
 import re
 import unicodedata
 
-from .config import PALAVRAS_MATERIAL
+from .config import (PALAVRAS_MATERIAL, PALAVRAS_QUE_PEDEM_OLHO,
+                     PALAVRAS_SERVICO_EMPORIO)
 
 PROIBIDOS = re.compile(r'[\/:*?"<>|]')
 
@@ -263,5 +264,73 @@ def nome_saida_fialho(nome_original, formato, sequencia):
     """
     nome = "%s_FIALHO_%s %02d" % (formato, resumo_fialho(nome_original),
                                   sequencia)
+    nome = PROIBIDOS.sub("", nome)
+    return re.sub(r"\s+", " ", nome).strip()
+
+
+# ======================================================================
+# EMPORIO PRINT
+# ======================================================================
+# Entra como a SOLIDA - PDF pronto, com a OS na frente - e sai como a
+# VOPRIX, com formato, cores e cliente no nome:
+#
+#     01995 - CHAPA CAIXA 4796.pdf
+#       ->  510x400_CMYK_EMPORIO_01995_CAIXA 4796_1
+#           510x400_GRAY_EMPORIO_01995_CAIXA 4796_2
+#
+# Quem identifica o servico e a OS. A descricao vem junto, limpa das
+# palavras que so dizem que aquilo e um trabalho de chapa.
+
+
+def resumo_emporio(nome):
+    """
+    '01995 - CHAPA CAIXA 4796.pdf' -> 'CAIXA 4796'
+
+    Tudo depois da OS, sem as palavras de servico e sem os tracos. Se
+    nao sobrar nada, devolve vazio - ai o nome fica so com a OS, que ja
+    identifica o trabalho.
+    """
+    base = os.path.splitext(os.path.basename(nome))[0]
+    oss = extrair_oss(nome)
+    if oss:
+        # tira a OS e o que vier antes dela
+        corte = base.find(oss[-1])
+        if corte >= 0:
+            base = base[corte + len(oss[-1]):]
+
+    base = re.sub(r"[_\-]+", " ", base)
+    palavras = [p for p in base.split(" ") if p]
+    ficam = [p for p in palavras
+             if limpo(p) not in PALAVRAS_SERVICO_EMPORIO]
+    return re.sub(r"\s+", " ", " ".join(ficam)).strip()
+
+
+def pede_olho(nome):
+    """True quando o nome do arquivo pede conferencia humana (verniz)."""
+    palavras = set(limpo(nome).split(" "))
+    return bool(palavras & PALAVRAS_QUE_PEDEM_OLHO)
+
+
+def nome_saida_emporio(nome_original, formato, tintas, indice=0, total=1):
+    """
+    Nome (sem .pdf) da chapa que vai para o CTP.
+
+    >>> nome_saida_emporio("01995 - CHAPA CAIXA 4796.pdf", "510x400",
+    ...                    set("CMYK"), 0, 2)
+    '510x400_CMYK_EMPORIO_01995_CAIXA 4796_1'
+
+    Com mais de uma pagina, o numero vai no fim depois de um _, que e
+    como os operadores ja escrevem.
+    """
+    oss = extrair_oss(nome_original)
+    partes = [formato, cores_no_nome(tintas) or "K", "EMPORIO",
+              " ".join(oss) if oss else "SEM_OS"]
+    descricao = resumo_emporio(nome_original)
+    if descricao:
+        partes.append(descricao)
+
+    nome = "_".join(partes)
+    if total > 1:
+        nome += "_%d" % (indice + 1)
     nome = PROIBIDOS.sub("", nome)
     return re.sub(r"\s+", " ", nome).strip()

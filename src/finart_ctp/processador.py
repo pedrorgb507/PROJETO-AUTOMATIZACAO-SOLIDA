@@ -23,16 +23,18 @@ import tempfile
 import time
 
 from .config import (AVISAR_QUANDO_NAO_FOR_CMYK, ENCAIXE_MAXIMO_MM, FORMATOS,
-                     FORMATOS_FIALHO, IMPRESSORA, IMPRIMIR_ORIGINAL,
-                     NOMES_TINTA, PASTA_CONTROLE, ROTULOS_PROVA,
+                     FORMATOS_EMPORIO, FORMATOS_FIALHO, IMPRESSORA,
+                     IMPRIMIR_ORIGINAL, NOMES_TINTA, PASTA_CONTROLE,
+                     ROTULOS_PROVA, ROTULOS_PROVA_EMPORIO,
                      ROTULOS_PROVA_FIALHO, ROTULOS_PROVA_VOPRIX,
                      TAMANHO_MAXIMO_MB, TOLERANCIA_MM)
 from .corel import ArquivoEmUso, publicar_pdf
 from .ghostscript import (LIMIAR_TINTA, cobertura_por_pagina, sem_cor_gritante,
                           separar_cinza, separar_tintas, tintas_da_cobertura)
 from .prova import imprimir
-from .nomes import (extrair_oss, nome_saida, nome_saida_fialho,
-                    nome_saida_voprix, resumo_fialho)
+from .nomes import (extrair_oss, nome_saida, nome_saida_emporio,
+                    nome_saida_fialho, nome_saida_voprix, pede_olho,
+                    resumo_fialho)
 from .pdf_builder import montar_pdf, montar_pdf_cinza
 from .utils import (anotar_pendencia, guardar_para_a_mao, log, nome_livre,
                     renomear_saida_no_registro)
@@ -40,6 +42,7 @@ from .utils import (anotar_pendencia, guardar_para_a_mao, log, nome_livre,
 SOLIDA = "SOLIDA"
 VOPRIX = "VOPRIX"
 FIALHO = "FIALHO"
+EMPORIO = "EMPORIO"
 
 
 def medir_paginas(pdf):
@@ -60,10 +63,14 @@ def formatos_do_cliente(cliente=SOLIDA):
     """
     A tabela de chapas desse cliente.
 
-    O Fialho tem a propria: a chapa grande dele e 730x600, que nao existe
-    na Solida - e a 775x635 da Solida nao existe nele.
+    Cada um tem a sua chapa grande: 775x635 na Solida e na VOPRIX,
+    730x600 no Fialho, 660x605 no Emporio. Uma nao vale na outra.
     """
-    return FORMATOS_FIALHO if cliente == FIALHO else FORMATOS
+    if cliente == FIALHO:
+        return FORMATOS_FIALHO
+    if cliente == EMPORIO:
+        return FORMATOS_EMPORIO
+    return FORMATOS
 
 
 def casar_formato(larg, alt, cliente=SOLIDA):
@@ -159,6 +166,8 @@ def rotulo_prova(larg, alt, cliente=SOLIDA):
         tabela = ROTULOS_PROVA_VOPRIX
     elif cliente == FIALHO:
         tabela = ROTULOS_PROVA_FIALHO
+    elif cliente == EMPORIO:
+        tabela = ROTULOS_PROVA_EMPORIO
     chave = casar_formato(larg, alt, cliente) or encaixar_formato(larg, alt,
                                                                   cliente)
     return tabela.get(chave, "")
@@ -246,6 +255,9 @@ def nome_da_chapa(cliente, nome, sufixo, larg, alt, tintas, indice, total,
     if cliente == VOPRIX:
         return nome_saida_voprix(nome, formato_no_nome(larg, alt, cliente),
                                  tintas, indice, total)
+    if cliente == EMPORIO:
+        return nome_saida_emporio(nome, formato_no_nome(larg, alt, cliente),
+                                  tintas, indice, total)
     if cliente == FIALHO:
         formato = formato_no_nome(larg, alt, cliente)
         prefixo = "%s_FIALHO_%s" % (formato, resumo_fialho(nome))
@@ -474,7 +486,8 @@ def _processar_pdf(pdf, nome, pasta_saida, cliente, resultado, falhar,
         # Arte de uma cor so chega como preto composto (C, M, Y e K em
         # partes iguais). Vale uma chapa em cinza, nao quatro. Duas
         # perguntas: os totais batem, e nao ha cor gritante em pixel nenhum.
-        cinza = (cliente == VOPRIX and cob is not None
+        # Vale para VOPRIX e EMPORIO - os dois ja escrevem GRAY a mao.
+        cinza = (cliente in (VOPRIX, EMPORIO) and cob is not None
                  and pagina_de_uma_cor(cob) and sem_cor_gritante(pdf, i + 1))
         if cinza:
             usadas = {"GRAY"}
@@ -488,9 +501,20 @@ def _processar_pdf(pdf, nome, pasta_saida, cliente, resultado, falhar,
             % (i + 1, base, larg_chapa, alt_chapa, dpi,
                "".join(sorted(usadas)) or "?"))
 
+        # Trabalho que sempre precisa de olho, por mais que o resto esteja
+        # em ordem: verniz. Pedido do operador do EMPORIO - e so dele: na
+        # SOLIDA um arquivo com 'verniz' no nome sempre fechou sozinho, e
+        # mudar isso pararia servico que hoje anda.
+        if cliente == EMPORIO and pede_olho(nome) and not aprovado:
+            motivo = ("pagina %d: o nome diz VERNIZ. Sairia como %s. "
+                      "Nao fechei: verniz se confere antes" % (i + 1, base))
+            anotar_pendencia(nome, motivo)
+            problemas.append(motivo)
+            continue
+
         # Quadricromia fecha sozinha. Fora dela, quem manda fechar e gente:
         # o programa para aqui, com os numeros na tela, e guarda o PDF.
-        if (AVISAR_QUANDO_NAO_FOR_CMYK and cliente == VOPRIX
+        if (AVISAR_QUANDO_NAO_FOR_CMYK and cliente in (VOPRIX, EMPORIO)
                 and not aprovado and usadas != set("CMYK")):
             numeros = ("C %.4f M %.4f Y %.4f K %.4f"
                        % (cob["C"], cob["M"], cob["Y"], cob["K"])

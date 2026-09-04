@@ -7,15 +7,16 @@ página, descobre quais tintas ela usa de verdade e gera **um PDF por página, s
 com essas tintas**, no dpi certo e com o nome que aquele cliente usa. Substitui
 o passo manual no Photoshop/InDesign.
 
-São três clientes, e a diferença entre eles está só nas pontas:
+São quatro clientes, e a diferença entre eles está só nas pontas:
 
 | | Chega como | Sai chamando |
 |---|---|---|
 | **SOLIDA** | PDF pronto | `49576R1` — o número da OS |
 | **VOPRIX** | `.cdr`, convertido pelo CorelDRAW | `510x400_CM_VOPRIX_Envelope_Saco` |
 | **FIALHO** | PDF pronto, no tamanho da chapa | `510x400_FIALHO_UNICIDADES 01` |
+| **EMPORIO** | PDF pronto, com a OS no nome | `510x400_CMYK_EMPORIO_01995_CAIXA 4796_1` |
 
-No meio — prova impressa, separação de tintas, uma chapa por página — os três
+No meio — prova impressa, separação de tintas, uma chapa por página — os quatro
 seguem o mesmo caminho, e as chapas caem na **mesma pasta FIA do dia**.
 
 **O original nunca é movido nem apagado** — a pasta de entrada é compartilhada.
@@ -28,7 +29,8 @@ O controle do que já foi feito fica num `_processados.json` no próprio PC.
 | Entrada SOLIDA | `V:\SOLIDA Grafica\<MÊS>\<DIA>` — só `.pdf` |
 | Entrada VOPRIX | `V:\VOPRIX\<MÊS>\<DIA>` — só `.cdr` |
 | Entrada FIALHO | `V:\Fialho Brindes\<MÊS>\<DIA>` — `.pdf` fecha, `.cdr` só avisa |
-| Saída | `W:\CTP\<MÊS>\<DIA>\FIA` — a mesma para os três |
+| Entrada EMPORIO | `V:\Emporio PRINT\<MÊS>\<DIA>` — só `.pdf` |
+| Saída | `W:\CTP\<MÊS>\<DIA>\FIA` — a mesma para os quatro |
 | Controle | `C:\CTP\_controle` — log e registro ficam no PC, fora da rede |
 
 Os caminhos reais desta máquina ficam no `config_local.py`; os do `config.py`
@@ -110,11 +112,12 @@ A folha leva no canto superior esquerdo, **fora da arte**, a etiqueta do
 formato — o alto da folha ganha uma faixa em branco e a arte desce para
 caber embaixo dela:
 
-| Formato da chapa | SOLIDA | VOPRIX | FIALHO |
-|---|---|---|---|
-| 510 × 400 mm | `SOLIDA F4` | `VOPRIX F4` | `FIALHO F4` |
-| 775 × 635 mm | `SOLIDA F2` | `VOPRIX F2` | — |
-| 730 × 600 mm | — | — | `FIALHO F2` |
+| Formato da chapa | SOLIDA | VOPRIX | FIALHO | EMPORIO |
+|---|---|---|---|---|
+| 510 × 400 mm | `SOLIDA F4` | `VOPRIX F4` | `FIALHO F4` | `EMPORIO F4` |
+| 775 × 635 mm | `SOLIDA F2` | `VOPRIX F2` | — | — |
+| 730 × 600 mm | — | — | `FIALHO F2` | — |
+| 660 × 605 mm | — | — | — | `EMPORIO F2` |
 
 A etiqueta diz também de quem é a chapa: todas saem na mesma bandeja.
 
@@ -287,7 +290,32 @@ esconderia que são duas artes diferentes. O registro é acertado junto, para n�
 apontar para uma chapa que mudou de nome, e o caso vai para o `_PENDENCIAS.txt`.
 A terceira sai `MODELO 3`, e ninguém mexe mais em quem já está numerado.
 
-## Cores da VOPRIX: quadricromia fecha sozinha, o resto espera
+## EMPORIO PRINT
+
+Entra como a SOLIDA — **só PDF**, com a OS na frente do nome — e sai como a
+VOPRIX, com formato, cores e cliente na chapa. As chapas dele são 510 × 400 mm
+(1000 dpi) e 660 × 605 mm (800 dpi); nenhuma das outras vale aqui.
+
+| Arquivo | Chapa |
+|---|---|
+| `01995 - CHAPA CAIXA 4796.pdf` (2 páginas) | `510x400_CMYK_EMPORIO_01995_CAIXA 4796_1` e `..._GRAY_..._2` |
+| `01965 - CHAPA - Maria Flor - Papel de Seda 45x65.pdf` | `660x605_GRAY_EMPORIO_01965_Maria Flor Papel de Seda 45x65` |
+
+Quem identifica o serviço é a **OS**, como o cliente identifica na VOPRIX. A
+descrição vem junto, sem as palavras que só dizem que aquilo é um trabalho de
+chapa (`CHAPA`, `ARTE`, `Regravar`, `MODELOS`) — a mesma ideia do nome principal
+do Fialho. A lista está em `PALAVRAS_SERVICO_EMPORIO`, no `config.py`. Página
+extra leva `_1`, `_2` no fim, que é como os operadores já escrevem.
+
+**Verniz nunca fecha sozinho.** Se o nome do arquivo disser `VERNIZ`, o programa
+para e chama, mesmo estando tudo em ordem — pedido do operador. A palavra fica no
+nome da chapa de propósito, para não se perder na pasta. A lista está em
+`PALAVRAS_QUE_PEDEM_OLHO`, e vale **só para o Emporio**: na SOLIDA um arquivo com
+"verniz" no nome sempre fechou sozinho, e mudar isso pararia serviço que hoje anda.
+
+Fora da quadricromia o Emporio espera, igual à VOPRIX (a seguir).
+
+## Cores da VOPRIX e do EMPORIO: quadricromia fecha sozinha, o resto espera
 
 **Se a página vier em CMYK, o caminho é o de sempre e a chapa sai sozinha.**
 Qualquer outra coisa — 1, 2 ou 3 cores, ou escala de cinza — **para antes de
@@ -304,9 +332,9 @@ nome que a chapa teria:
 Em quadricromia o caminho é sempre o mesmo; em uma ou duas cores a decisão muda
 de trabalho para trabalho, e aí quem manda fechar é gente. Para desligar a
 trava: `AVISAR_QUANDO_NAO_FOR_CMYK = False` no `config.py`. Ela vale só para a
-VOPRIX — a SOLIDA fecha tudo como sempre fez.
+VOPRIX e o Emporio — a SOLIDA e o Fialho fecham tudo como sempre fizeram.
 
-### Arte de uma cor sai em escala de cinza
+### Arte de uma cor sai em escala de cinza (VOPRIX e EMPORIO)
 
 Arte de uma cor **não chega como preto puro**: a Corel exporta o preto composto,
 com C, M, Y e K juntos. Gerar isso como quadricromia daria quatro chapas onde o

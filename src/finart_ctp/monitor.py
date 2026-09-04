@@ -6,11 +6,12 @@ import sys
 import time
 from datetime import datetime
 
-from .config import (BASE_CTP, BASE_ENTRADA, BASE_ENTRADA_FIALHO,
-                     BASE_ENTRADA_VOPRIX, ESPERA_IMPRESSORA, IMPRESSORA,
-                     INTERVALO, PASTA_CONTROLE, SUBPASTA_SAIDA)
+from .config import (BASE_CTP, BASE_ENTRADA, BASE_ENTRADA_EMPORIO,
+                     BASE_ENTRADA_FIALHO, BASE_ENTRADA_VOPRIX,
+                     ESPERA_IMPRESSORA, IMPRESSORA, INTERVALO,
+                     PASTA_CONTROLE, SUBPASTA_SAIDA)
 from .ghostscript import GS
-from .processador import FIALHO, SOLIDA, VOPRIX, processar
+from .processador import EMPORIO, FIALHO, SOLIDA, VOPRIX, processar
 from .utils import (arquivo_estavel, carregar_registro, chave_arquivo,
                     localizar_pasta_mes, log, pasta_do_dia, salvar_registro)
 
@@ -31,6 +32,8 @@ def clientes():
         lista.append((VOPRIX, BASE_ENTRADA_VOPRIX, (".cdr",)))
     if BASE_ENTRADA_FIALHO:
         lista.append((FIALHO, BASE_ENTRADA_FIALHO, (".pdf", ".cdr")))
+    if BASE_ENTRADA_EMPORIO:
+        lista.append((EMPORIO, BASE_ENTRADA_EMPORIO, (".pdf",)))
     return lista
 
 

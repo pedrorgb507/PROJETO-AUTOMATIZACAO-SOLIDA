@@ -117,6 +117,19 @@ PDF_CORELDRAW = {
 }
 
 # ----------------------------------------------------------------------
+# QUARTO CLIENTE: EMPORIO PRINT
+# ----------------------------------------------------------------------
+# Mesma arvore MES\DIA, base propria. So manda PDF - nada de Corel - e o
+# nome de entrada e "OS - descricao":
+#
+#     01995 - CHAPA CAIXA 4796.pdf
+#     01965 - CHAPA - Maria Flor - Papel de Seda 45x65.pdf
+#
+# Entra como a SOLIDA (PDF pronto) e sai como a VOPRIX (formato, cores e
+# cliente no nome). Deixe None para nao vigiar essa pasta.
+BASE_ENTRADA_EMPORIO = r"X:\EMPORIO"
+
+# ----------------------------------------------------------------------
 # FORMATOS ACEITOS
 # ----------------------------------------------------------------------
 # (largura_mm, altura_mm): (dpi, sufixo_no_nome)
@@ -131,6 +144,12 @@ FORMATOS = {
 FORMATOS_FIALHO = {
     (510, 400): (1000, ""),
     (730, 600): (800,  ""),
+}
+
+# A chapa grande do Emporio e outra ainda: 660x605.
+FORMATOS_EMPORIO = {
+    (510, 400): (1000, ""),
+    (660, 605): (800,  ""),
 }
 
 TOLERANCIA_MM = 3
@@ -163,6 +182,35 @@ ROTULOS_PROVA_FIALHO = {
     (510, 400): "FIALHO F4",
     (730, 600): "FIALHO F2",
 }
+
+ROTULOS_PROVA_EMPORIO = {
+    (510, 400): "EMPORIO F4",
+    (660, 605): "EMPORIO F2",
+}
+
+# ----------------------------------------------------------------------
+# NOME DE SAIDA DO EMPORIO PRINT
+# ----------------------------------------------------------------------
+# O padrao dos operadores, lido das chapas que eles fecharam a mao:
+#
+#     510x400_CMYK_EMPORIO_01987_Guia
+#     660x605_GRAY_EMPORIO_01965_Maria Flor
+#     510x400_CMYK_EMPORIO_01995_CAIXA 4796_1   (pagina 1)
+#     510x400_GRAY_EMPORIO_01995_CAIXA 4796_2   (pagina 2)
+#
+# A OS identifica o servico, como o cliente identifica na VOPRIX. A
+# descricao vem do nome do arquivo, sem as palavras que so dizem que
+# aquilo e um trabalho de chapa - a mesma ideia do nome principal do
+# Fialho. VERNIZ NAO entra nesta lista de proposito: chapa de verniz
+# precisa aparecer no nome.
+PALAVRAS_SERVICO_EMPORIO = {
+    "CHAPA", "CHAPAS", "ARTE", "ARTES", "REGRAVAR", "REGRAVA", "REGRAVACAO",
+    "FORMATO", "MODELO", "MODELOS", "GRADE",
+}
+
+# Trabalho que NUNCA fecha sozinho, por mais que o resto esteja em ordem.
+# Pedido do operador: verniz se confere antes.
+PALAVRAS_QUE_PEDEM_OLHO = {"VERNIZ"}
 
 # ----------------------------------------------------------------------
 # NOME DE SAIDA DO FIALHO

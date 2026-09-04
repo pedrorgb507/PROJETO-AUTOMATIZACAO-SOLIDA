@@ -257,6 +257,7 @@ def test_solida_sem_os_continua_barrada(monkeypatch, tmp_path):
 def test_clientes_traz_as_duas_pastas(monkeypatch):
     monkeypatch.setattr(M, "BASE_ENTRADA_VOPRIX", r"V:\VOPRIX")
     monkeypatch.setattr(M, "BASE_ENTRADA_FIALHO", None)
+    monkeypatch.setattr(M, "BASE_ENTRADA_EMPORIO", None)
     lista = M.clientes()
     assert [c[0] for c in lista] == [M.SOLIDA, M.VOPRIX]
     assert [c[2] for c in lista] == [(".pdf",), (".cdr",)]
@@ -265,6 +266,7 @@ def test_clientes_traz_as_duas_pastas(monkeypatch):
 def test_sem_pasta_da_voprix_fica_so_a_solida(monkeypatch):
     monkeypatch.setattr(M, "BASE_ENTRADA_VOPRIX", None)
     monkeypatch.setattr(M, "BASE_ENTRADA_FIALHO", None)
+    monkeypatch.setattr(M, "BASE_ENTRADA_EMPORIO", None)
     assert [c[0] for c in M.clientes()] == [M.SOLIDA]
 
 

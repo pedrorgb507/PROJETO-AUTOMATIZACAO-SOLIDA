@@ -301,12 +301,14 @@ def test_a_trava_de_cor_da_voprix_nao_pega_o_fialho(monkeypatch, tmp_path):
 # Monitor
 # ----------------------------------------------------------------------
 
-def test_monitor_vigia_as_tres_pastas(monkeypatch):
+def test_monitor_vigia_as_pastas_de_todos(monkeypatch):
     monkeypatch.setattr(M, "BASE_ENTRADA_VOPRIX", r"V:\VOPRIX")
     monkeypatch.setattr(M, "BASE_ENTRADA_FIALHO", r"V:\Fialho Brindes")
+    monkeypatch.setattr(M, "BASE_ENTRADA_EMPORIO", r"V:\Emporio PRINT")
     lista = M.clientes()
-    assert [c[0] for c in lista] == [M.SOLIDA, M.VOPRIX, M.FIALHO]
+    assert [c[0] for c in lista] == [M.SOLIDA, M.VOPRIX, M.FIALHO, M.EMPORIO]
     assert lista[2][2] == (".pdf", ".cdr")     # o .cdr entra so para avisar
+    assert lista[3][2] == (".pdf",)            # o Emporio so manda PDF
 
 
 def test_varrer_do_fialho_ve_pdf_e_cdr(monkeypatch, tmp_path):
