@@ -15,10 +15,10 @@ import time
 
 from .config import (FORMATOS, IMPRESSORA, IMPRIMIR_ORIGINAL,
                      NOMES_TINTA, PASTA_CONTROLE, ROTULOS_PROVA,
-                     TAMANHO_MAXIMO_MB, TOLERANCIA_MM)
+                     ROTULOS_PROVA_VOPRIX, TAMANHO_MAXIMO_MB, TOLERANCIA_MM)
 from .ghostscript import separar_tintas, tintas_por_pagina
 from .prova import imprimir
-from .nomes import extrair_oss, nome_saida
+from .nomes import extrair_oss, nome_saida, nome_saida_voprix
 from .pdf_builder import montar_pdf
 from .utils import anotar_pendencia, log, nome_livre
 
@@ -54,9 +54,9 @@ def identificar_formato(larg, alt):
     return FORMATOS[chave] if chave else (None, None)
 
 
-def rotulo_prova(larg, alt):
+def rotulo_prova(larg, alt, rotulos=ROTULOS_PROVA):
     """Texto que vai no canto da folha de prova. Vazio se nao reconhecer."""
-    return ROTULOS_PROVA.get(casar_formato(larg, alt), "")
+    return rotulos.get(casar_formato(larg, alt), "")
 
 
 def _gerar_chapa(origem, pasta_saida, base, pagina, dpi, larg, alt, usadas):
@@ -93,44 +93,40 @@ def _gerar_chapa(origem, pasta_saida, base, pagina, dpi, larg, alt, usadas):
         shutil.rmtree(tmp, ignore_errors=True)
 
 
-def processar(caminho, pasta_saida):
-    """
-    Fluxo completo de um arquivo, pagina a pagina.
+def _falhar(nome, motivo):
+    """Marca pendencia e devolve um resultado 'erro'. Nunca levanta."""
+    log("%s: %s" % (nome, motivo), alerta=True)
+    anotar_pendencia(nome, motivo)
+    return {"status": "erro", "saidas": [], "motivo": motivo, "impresso": None}
 
-    Devolve {"status": "ok"|"erro", "saidas": [...], "motivo": "..."}.
+
+def _nucleo(origem_pdf, nome_ref, pasta_saida, rotulos, nomear,
+            colisao="outra arte com o mesmo nome"):
+    """
+    Miolo comum aos dois fluxos: mede, imprime a prova e gera as chapas.
+
+    - origem_pdf : PDF a rasterizar/separar (na VOPRIX e um temporario)
+    - nome_ref   : nome que aparece no log e nas pendencias
+    - rotulos    : formato -> etiqueta da prova
+    - nomear     : (indice, total, chave_formato, sufixo, tintas) -> nome de saida
+    - colisao    : texto do aviso quando ja existe um arquivo com o mesmo nome
+
+    Devolve {"status": "ok"|"erro"|"espera", "saidas": [...], "motivo": "..."}.
     Nunca levanta excecao para cima.
     """
-    nome = os.path.basename(caminho)
-    resultado = {"status": "ok", "saidas": [], "motivo": "",
-                 "impresso": None}
-
-    def falhar(motivo):
-        log("%s: %s" % (nome, motivo), alerta=True)
-        anotar_pendencia(nome, motivo)
-        resultado["status"] = "erro"
-        resultado["motivo"] = motivo
-        return resultado
-
-    mb = os.path.getsize(caminho) / 1048576
-    if mb > TAMANHO_MAXIMO_MB:
-        return falhar("arquivo gigante: %.0f MB, acima do limite de %d MB. "
-                      "Nao processei - precisa ser tratado a mao"
-                      % (mb, TAMANHO_MAXIMO_MB))
-
-    if not extrair_oss(nome):
-        return falhar("nao achei numero de OS no nome")
+    resultado = {"status": "ok", "saidas": [], "motivo": "", "impresso": None}
 
     try:
-        medidas = medir_paginas(caminho)
-        tintas = tintas_por_pagina(caminho)
+        medidas = medir_paginas(origem_pdf)
+        tintas = tintas_por_pagina(origem_pdf)
     except Exception as e:
-        return falhar("PDF ilegivel: %s" % e)
+        return _falhar(nome_ref, "PDF ilegivel: %s" % e)
 
     total = len(medidas)
     if not total:
-        return falhar("PDF sem paginas")
+        return _falhar(nome_ref, "PDF sem paginas")
 
-    log("'%s': %d pagina(s)" % (nome, total))
+    log("'%s': %d pagina(s)" % (nome_ref, total))
     os.makedirs(pasta_saida, exist_ok=True)
     problemas = []
 
@@ -138,8 +134,8 @@ def processar(caminho, pasta_saida):
     # gastar papel se alguma pagina tiver formato conhecido.
     if IMPRIMIR_ORIGINAL and any(identificar_formato(l, a)[0] for l, a in medidas):
         try:
-            etiquetas = [rotulo_prova(l, a) for l, a in medidas]
-            _, folhas = imprimir(caminho, etiquetas=etiquetas)
+            etiquetas = [rotulo_prova(l, a, rotulos) for l, a in medidas]
+            _, folhas = imprimir(origem_pdf, etiquetas=etiquetas)
             log("   impresso em %s (%d folha%s, so frente)"
                 % (IMPRESSORA, folhas, "s" if folhas > 1 else ""))
             resultado["impresso"] = folhas
@@ -152,36 +148,35 @@ def processar(caminho, pasta_saida):
             return resultado
 
     for i, (larg, alt) in enumerate(medidas):
-        dpi, sufixo = identificar_formato(larg, alt)
-        base = nome_saida(nome, sufixo or "", i, total)
-
-        if not dpi:
+        chave = casar_formato(larg, alt)
+        if not chave:
             motivo = ("pagina %d: %.0f x %.0f mm nao bate com nenhum formato"
                       % (i + 1, larg, alt))
             log("   " + motivo, alerta=True)
-            anotar_pendencia(nome, motivo)
+            anotar_pendencia(nome_ref, motivo)
             problemas.append(motivo)
             continue
 
+        dpi, sufixo = FORMATOS[chave]
         usadas = tintas[i] if i < len(tintas) else set("CMYK")
+        base = nomear(i, total, chave, sufixo, usadas)
         log("   p%d -> %s | %.0fx%.0f mm | %d dpi | tintas: %s"
             % (i + 1, base, larg, alt, dpi, "".join(sorted(usadas)) or "?"))
 
-        # Sem a descricao no nome, duas artes da mesma OS batem de frente.
         if os.path.exists(os.path.join(pasta_saida, base + ".pdf")):
-            aviso = ("ja existe %s.pdf (outra arte com a mesma OS); "
-                     "este saiu como _v2" % base)
+            aviso = ("ja existe %s.pdf (%s); este saiu como _v2"
+                     % (base, colisao))
             log("   ATENCAO: " + aviso, alerta=True)
-            anotar_pendencia(nome, aviso)
+            anotar_pendencia(nome_ref, aviso)
 
         inicio = time.time()
         try:
-            saida, letras = _gerar_chapa(caminho, pasta_saida, base, i + 1,
+            saida, letras = _gerar_chapa(origem_pdf, pasta_saida, base, i + 1,
                                          dpi, larg, alt, usadas)
         except Exception as e:
             motivo = "pagina %d: %s" % (i + 1, e)
             log("   FALHOU: %s" % motivo, alerta=True)
-            anotar_pendencia(nome, motivo)
+            anotar_pendencia(nome_ref, motivo)
             problemas.append(motivo)
             continue
 
@@ -195,3 +190,75 @@ def processar(caminho, pasta_saida):
         resultado["status"] = "erro"
         resultado["motivo"] = " ; ".join(problemas)
     return resultado
+
+
+def processar(caminho, pasta_saida):
+    """
+    Fluxo de um PDF do cliente (SOLIDA), pagina a pagina.
+
+    Devolve {"status": "ok"|"erro"|"espera", "saidas": [...], "motivo": "..."}.
+    Nunca levanta excecao para cima.
+    """
+    nome = os.path.basename(caminho)
+
+    mb = os.path.getsize(caminho) / 1048576
+    if mb > TAMANHO_MAXIMO_MB:
+        return _falhar(nome, "arquivo gigante: %.0f MB, acima do limite de "
+                       "%d MB. Nao processei - precisa ser tratado a mao"
+                       % (mb, TAMANHO_MAXIMO_MB))
+
+    if not extrair_oss(nome):
+        return _falhar(nome, "nao achei numero de OS no nome")
+
+    # Sem a descricao no nome, duas artes da mesma OS batem de frente.
+    def nomear(indice, total, chave, sufixo, tintas):
+        return nome_saida(nome, sufixo or "", indice, total)
+
+    return _nucleo(caminho, nome, pasta_saida, ROTULOS_PROVA, nomear,
+                   colisao="outra arte com a mesma OS")
+
+
+def processar_voprix(caminho, pasta_saida):
+    """
+    Fluxo de um .cdr da VOPRIX: converte pelo CorelDRAW e gera a chapa.
+
+    O .cdr ja vem montado no tamanho da chapa. O nome de saida sai do
+    proprio nome do arquivo (produto antes da medida), com o formato e as
+    tintas na frente: 510x400_CM_VOPRIX_Envelope_Saco.
+
+    Se o arquivo estiver aberto na sessao do operador, devolve status
+    'pular' - nao mexemos nele e tentamos de novo na proxima passada. Se o
+    CorelDRAW nao responder, devolve 'espera'.
+    """
+    from .corel import ArquivoEmUso, publicar_pdf
+
+    nome = os.path.basename(caminho)
+
+    mb = os.path.getsize(caminho) / 1048576
+    if mb > TAMANHO_MAXIMO_MB:
+        return _falhar(nome, "arquivo gigante: %.0f MB, acima do limite de "
+                       "%d MB. Nao processei - precisa ser tratado a mao"
+                       % (mb, TAMANHO_MAXIMO_MB))
+
+    os.makedirs(PASTA_CONTROLE, exist_ok=True)
+    tmp = tempfile.mkdtemp(prefix="voprix_", dir=PASTA_CONTROLE)
+    pdf = os.path.join(tmp, os.path.splitext(nome)[0] + ".pdf")
+    try:
+        try:
+            publicar_pdf(caminho, pdf)
+        except ArquivoEmUso as e:
+            return {"status": "pular", "saidas": [], "motivo": str(e),
+                    "impresso": None}
+        except Exception as e:
+            log("   %s: CorelDRAW nao converteu (%s)" % (nome, e), alerta=True)
+            return {"status": "espera", "saidas": [], "impresso": None,
+                    "motivo": "CorelDRAW indisponivel: %s" % e}
+
+        def nomear(indice, total, chave, sufixo, tintas):
+            return nome_saida_voprix(nome, "%dx%d" % chave, tintas,
+                                     indice, total)
+
+        return _nucleo(pdf, nome, pasta_saida, ROTULOS_PROVA_VOPRIX, nomear,
+                       colisao="outro arquivo com o mesmo nome de saida")
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)

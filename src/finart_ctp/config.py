@@ -15,6 +15,12 @@ sobrescreve o que estiver aqui (veja o final do arquivo).
 #   X:\ENTRADA\SETEMBRO\02
 BASE_ENTRADA = r"X:\ENTRADA"
 
+# A VOPRIX manda .cdr numa pasta so dela, com a mesma arvore MES\DIA.
+# Cada .cdr ja vem montado no tamanho da chapa; o programa converte pelo
+# proprio CorelDRAW e gera a chapa como faz com os PDFs.
+# Deixe None para desligar o fluxo VOPRIX.
+BASE_ENTRADA_VOPRIX = r"Z:\VOPRIX"
+
 # Onde os PDFs prontos do CTP sao gravados:
 #   Y:\CTP\SETEMBRO\03\FIA
 # O programa acha a pasta do mes e do dia e cria a subpasta de saida
@@ -43,6 +49,12 @@ TOLERANCIA_MM = 3
 ROTULOS_PROVA = {
     (510, 400): "SOLIDA F4",
     (775, 635): "SOLIDA F2",
+}
+
+# A mesma etiqueta, para a prova dos .cdr da VOPRIX.
+ROTULOS_PROVA_VOPRIX = {
+    (510, 400): "VOPRIX F4",
+    (775, 635): "VOPRIX F2",
 }
 
 # ----------------------------------------------------------------------

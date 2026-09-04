@@ -18,6 +18,10 @@ O ORIGINAL NUNCA E MOVIDO NEM APAGADO: a pasta de entrada e compartilhada.
 O controle do que ja foi feito fica no _processados.json, na BASE_CTP.
 
 Substitui o Photoshop e o InDesign.
+
+Fluxo VOPRIX: uma segunda pasta (BASE_ENTRADA_VOPRIX) recebe .cdr ja montados
+no tamanho da chapa. Cada um e convertido pelo proprio CorelDRAW da maquina e
+segue o mesmo caminho. Ver corel.py e nomes.nome_saida_voprix.
 """
 
 __version__ = "3.0.0"
