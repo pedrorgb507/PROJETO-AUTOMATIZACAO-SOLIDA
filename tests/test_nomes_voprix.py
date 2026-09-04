@@ -3,7 +3,7 @@
 Nome de saida da VOPRIX, com os arquivos reais da pasta do cliente.
 
 Padrao de entrada:  Produto_medida_cores_Cliente.cdr
-Padrao de saida:    510x400_CORES_VOPRIX_Produto
+Padrao de saida:    510x400_CORES_VOPRIX_CLIENTE_produto
 """
 
 import pytest
@@ -45,28 +45,36 @@ def test_cor_especial_entra_depois_da_escala():
 def test_nome_de_saida_com_as_cores_certas():
     n = "Envelope_Saco_23x31,5_Colegio_Unus.cdr"
     assert (nome_saida_voprix(n, "510x400", {"C", "M"})
-            == "510x400_CM_VOPRIX_Envelope_Saco")
+            == "510x400_CM_VOPRIX_COLEGIO_UNUS_envelope_saco")
     assert (nome_saida_voprix(n, "510x400", set("CMYK"))
-            == "510x400_CMYK_VOPRIX_Envelope_Saco")
+            == "510x400_CMYK_VOPRIX_COLEGIO_UNUS_envelope_saco")
     assert (nome_saida_voprix(n, "510x400", {"K"})
-            == "510x400_K_VOPRIX_Envelope_Saco")
+            == "510x400_K_VOPRIX_COLEGIO_UNUS_envelope_saco")
 
 
 def test_numero_da_pagina_vai_no_fim_com_dois_digitos():
     n = "Pasta_Bopp_Orelha_44x31_Colegio_Unus.cdr"
     assert (nome_saida_voprix(n, "510x400", {"C"}, 0, 2)
-            == "510x400_C_VOPRIX_Pasta_Bopp_Orelha 01")
+            == "510x400_C_VOPRIX_COLEGIO_UNUS_pasta_bopp_orelha 01")
     assert (nome_saida_voprix(n, "510x400", {"C"}, 1, 2)
-            == "510x400_C_VOPRIX_Pasta_Bopp_Orelha 02")
+            == "510x400_C_VOPRIX_COLEGIO_UNUS_pasta_bopp_orelha 02")
 
 
 def test_uma_pagina_nao_leva_numero():
+    """Cliente de um nome so entra sozinho."""
     n = "Cartaz_29,7x42_4_0_Campeao.cdr"
     assert nome_saida_voprix(n, "510x400", set("CMYK")) \
-        == "510x400_CMYK_VOPRIX_Cartaz"
+        == "510x400_CMYK_VOPRIX_CAMPEAO_cartaz"
 
 
 def test_outro_formato_de_chapa():
     n = "Cartaz_29,7x42_4_0_Campeao.cdr"
     assert nome_saida_voprix(n, "775x635", {"K"}) \
-        == "775x635_K_VOPRIX_Cartaz"
+        == "775x635_K_VOPRIX_CAMPEAO_cartaz"
+
+
+def test_cliente_de_dois_nomes_entra_inteiro():
+    """O arquivo de verdade: Campeao_Lubrificantes_e_Filtro."""
+    n = "Cartaz_29,7x42_4_0_Campeao_Lubrificantes_e_Filtro.cdr"
+    assert nome_saida_voprix(n, "775x635", {"K"}) \
+        == "775x635_K_VOPRIX_LUBRIFICANTES_FILTRO_cartaz"

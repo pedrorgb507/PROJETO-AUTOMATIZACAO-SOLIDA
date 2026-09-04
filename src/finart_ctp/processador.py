@@ -34,7 +34,8 @@ from .prova import imprimir
 from .nomes import (extrair_oss, nome_saida, nome_saida_fialho,
                     nome_saida_voprix, resumo_fialho)
 from .pdf_builder import montar_pdf, montar_pdf_cinza
-from .utils import anotar_pendencia, guardar_para_a_mao, log, nome_livre
+from .utils import (anotar_pendencia, guardar_para_a_mao, log, nome_livre,
+                    renomear_saida_no_registro)
 
 SOLIDA = "SOLIDA"
 VOPRIX = "VOPRIX"
@@ -203,6 +204,40 @@ def proxima_sequencia(pasta_saida, prefixo):
         if achou:
             maior = max(maior, int(achou.group(1)))
     return maior + 1
+
+
+def resolver_modelo(pasta_saida, base):
+    """
+    (base_a_usar, renomeada) quando outra arte ja ocupa esse nome.
+
+    Combinado com o operador: as duas passam a se chamar MODELO, e a que
+    JA ESTAVA GRAVADA e renomeada para 'MODELO 1'. Sem isso ficaria uma
+    chapa com nome limpo e outra com numero, e ninguem saberia que sao
+    duas artes diferentes do mesmo cliente e produto.
+
+    'renomeada' e (de, para) quando houve renomeacao, ou None.
+    """
+    padrao = re.compile(r"^%s MODELO (\d+)\.pdf$" % re.escape(base), re.I)
+    maior = 0
+    try:
+        for nome in os.listdir(pasta_saida):
+            achou = padrao.match(nome)
+            if achou:
+                maior = max(maior, int(achou.group(1)))
+    except OSError:
+        pass
+
+    if maior:                                  # a serie ja existe
+        return "%s MODELO %d" % (base, maior + 1), None
+
+    limpo = os.path.join(pasta_saida, base + ".pdf")
+    if os.path.exists(limpo):
+        primeiro = "%s MODELO 1" % base
+        os.replace(limpo, os.path.join(pasta_saida, primeiro + ".pdf"))
+        renomear_saida_no_registro(base + ".pdf", primeiro + ".pdf")
+        return "%s MODELO 2" % base, (base + ".pdf", primeiro + ".pdf")
+
+    return base, None
 
 
 def nome_da_chapa(cliente, nome, sufixo, larg, alt, tintas, indice, total,
@@ -467,8 +502,17 @@ def _processar_pdf(pdf, nome, pasta_saida, cliente, resultado, falhar,
             problemas.append(motivo)
             continue
 
-        # Sem a descricao no nome, duas artes da mesma OS batem de frente.
-        if os.path.exists(os.path.join(pasta_saida, base + ".pdf")):
+        # Duas artes diferentes com o mesmo nome de saida. Na VOPRIX as
+        # duas viram MODELO; nos outros clientes segue o _v2 de sempre.
+        if cliente == VOPRIX:
+            base, renomeada = resolver_modelo(pasta_saida, base)
+            if renomeada:
+                aviso = ("outra arte ja tinha o nome %s: ela passou a se "
+                         "chamar %s e esta saiu como %s.pdf"
+                         % (renomeada[0], renomeada[1], base))
+                log("   ATENCAO: " + aviso, alerta=True)
+                anotar_pendencia(nome, aviso)
+        elif os.path.exists(os.path.join(pasta_saida, base + ".pdf")):
             aviso = ("ja existe %s.pdf (outra arte com o mesmo nome de "
                      "saida); este saiu como _v2" % base)
             log("   ATENCAO: " + aviso, alerta=True)

@@ -210,6 +210,27 @@ def salvar_registro(reg):
 # Arquivos
 # ----------------------------------------------------------------------
 
+def renomear_saida_no_registro(de, para):
+    """
+    Acerta o registro quando uma chapa ja gravada mudou de nome.
+
+    Acontece no MODELO: chegando uma segunda arte com o mesmo nome, a
+    primeira vira 'MODELO 1'. O registro guarda o que cada arquivo gerou,
+    e um registro que aponta para uma chapa que nao existe mais nao serve
+    para nada.
+    """
+    reg = carregar_registro()
+    mexeu = False
+    for entrada in reg.values():
+        saidas = entrada.get("saidas") or []
+        if de in saidas:
+            entrada["saidas"] = [para if s == de else s for s in saidas]
+            mexeu = True
+    if mexeu:
+        salvar_registro(reg)
+    return mexeu
+
+
 def arquivo_estavel(caminho):
     """True se o arquivo parou de crescer (terminou de copiar pela rede)."""
     try:

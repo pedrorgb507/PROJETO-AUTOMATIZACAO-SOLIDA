@@ -247,23 +247,45 @@ caso é anotado no `_PENDENCIAS.txt`, para você renomear como preferir.
 
 ## Nome do arquivo de saída — VOPRIX
 
-Aqui não há OS. O nome de entrada é `Produto_medida_cores_Cliente.cdr`, e o que
-identifica a chapa na hora de gravar é o **produto** — o pedaço antes da
-primeira medida. O nome de saída junta formato, tintas encontradas e produto:
+Aqui não há OS. O nome de entrada é `Produto_medida_cores_Cliente.cdr`, e a
+chapa se chama pelo **CLIENTE em maiúscula na frente, produto em minúscula
+atrás**:
 
 | Original | Sai como |
 |---|---|
-| `Envelope_Saco_23x31,5_Colegio_Unus.cdr` (só C e M) | `510x400_CM_VOPRIX_Envelope_Saco.pdf` |
-| `Cartaz_29,7x42_4_0_Campeao_Lubrificantes.cdr` (775×635) | `775x635_CMYK_VOPRIX_Cartaz.pdf` |
-| `Pasta_Bopp_Orelha_44x31_Colegio_Unus.cdr` (2 páginas) | `510x400_C_VOPRIX_Pasta_Bopp_Orelha 01.pdf` e `... 02.pdf` |
+| `Panfleto_15,0x21,0_4_0_M3RIN.cdr` | `510x400_CMYK_VOPRIX_M3RIN_panfleto.pdf` |
+| `Envelope_Saco_23x31,5_Colegio_Unus.cdr` (só C e M) | `510x400_CM_VOPRIX_COLEGIO_UNUS_envelope_saco.pdf` |
+| `Pasta_Bopp_Orelha_44x31_Colegio_Unus.cdr` (2 páginas) | `..._COLEGIO_UNUS_pasta_bopp_orelha 01.pdf` e `... 02.pdf` |
 
-As tintas são as que a arte usa de verdade, não as do nome do arquivo. Cor
-especial entra depois das quatro de escala. Nome sem medida nenhuma vira
-produto por inteiro.
+**O cliente são os dois últimos nomes do arquivo** — ou só o último, quando só
+há um (`M3RIN`). Número solto não conta: nem a especificação de cores (`4_0`)
+nem a data no fim (`_31_08`). Palavra de ligação também não, senão
+`Campeao_Lubrificantes_e_Filtro` viraria `E_FILTRO`.
 
-Como o cliente final não entra no nome, duas artes do mesmo produto no mesmo dia
-— dois `Papel_Manteiga`, de clientes diferentes — batem de frente: a segunda sai
-`_v2` e o caso vai para o `_PENDENCIAS.txt`.
+O produto é o que vem antes da medida; sem medida no nome, é tudo o que sobra na
+frente do cliente. As tintas são as que a arte usa de verdade, não as do nome do
+arquivo, e cor especial entra depois das quatro de escala.
+
+**Por que o cliente vem primeiro:** o produto sozinho não identifica trabalho
+nenhum. Dois `Panfleto` chegaram no mesmo dia, de clientes diferentes, e as
+chapas foram para o CTP como `Panfleto.pdf` e `Panfleto_v2.pdf` — nada no nome
+dizia qual era qual. Com o cliente na frente, os 16 arquivos de setembro dão 16
+nomes diferentes.
+
+### Quando ainda assim dois baterem: MODELO
+
+Mesmo cliente, mesmo produto, mesmo dia, artes diferentes. Aí as duas passam a
+se chamar MODELO — e a que **já estava gravada é renomeada** para `MODELO 1`:
+
+```
+510x400_CMYK_VOPRIX_COLEGIO_UNUS_pasta MODELO 1.pdf   ← era ..._pasta.pdf
+510x400_CMYK_VOPRIX_COLEGIO_UNUS_pasta MODELO 2.pdf   ← a que acabou de chegar
+```
+
+Só assim as duas ficam simétricas: uma com nome limpo e outra numerada
+esconderia que são duas artes diferentes. O registro é acertado junto, para não
+apontar para uma chapa que mudou de nome, e o caso vai para o `_PENDENCIAS.txt`.
+A terceira sai `MODELO 3`, e ninguém mexe mais em quem já está numerado.
 
 ## Cores da VOPRIX: quadricromia fecha sozinha, o resto espera
 

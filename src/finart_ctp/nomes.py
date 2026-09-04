@@ -119,6 +119,53 @@ def resumo_voprix(nome):
     return base
 
 
+# Palavra que nao identifica ninguem e nao conta como nome.
+LIGACAO = {"E", "DE", "DA", "DO", "DAS", "DOS", "COM", "SEM", "PARA"}
+
+
+def _posicoes_de_nome(partes):
+    """Onde estao os pedacos que valem como nome de gente ou de empresa."""
+    return [i for i, p in enumerate(partes)
+            if p and not p.isdigit() and not MEDIDA.match(p)
+            and p.upper() not in LIGACAO]
+
+
+def partes_voprix(nome):
+    """
+    (CLIENTE, produto) a partir do nome do arquivo.
+
+    >>> partes_voprix("Panfleto_15,0x21,0_4_0_M3RIN.cdr")
+    ('M3RIN', 'panfleto')
+    >>> partes_voprix("Envelope_Saco_23x31,5_Colegio_Unus.cdr")
+    ('COLEGIO_UNUS', 'envelope_saco')
+
+    O cliente sao os DOIS ULTIMOS nomes do arquivo - ou so o ultimo,
+    quando so ha um. Numero solto nao conta (a especificacao de cores
+    '4_0', a data no fim) nem palavra de ligacao.
+
+    O produto e o que vem antes da medida. Sem medida no nome, e tudo o
+    que sobra na frente do cliente.
+    """
+    base = os.path.splitext(os.path.basename(nome))[0]
+    partes = base.split("_")
+
+    medida = next((i for i, p in enumerate(partes) if MEDIDA.match(p)), None)
+    inicio = medida + 1 if medida is not None else 0
+    cauda = partes[inicio:]
+
+    posicoes = _posicoes_de_nome(cauda)
+    escolhidas = posicoes[-2:] if len(posicoes) >= 2 else posicoes[-1:]
+    cliente = "_".join(cauda[i] for i in escolhidas).upper()
+
+    if medida is not None:
+        produto = "_".join(partes[:medida])
+    elif escolhidas:
+        produto = "_".join(partes[:inicio + escolhidas[0]])
+    else:
+        produto = base
+    return cliente, (produto or base).lower()
+
+
 def cores_no_nome(tintas):
     """{'M','C'} -> 'CM'. Cor especial entra depois das quatro de escala."""
     escala = [c for c in "CMYK" if c in tintas]
@@ -132,12 +179,18 @@ def nome_saida_voprix(nome_original, formato, tintas, indice=0, total=1):
 
     >>> nome_saida_voprix("Envelope_Saco_23x31,5_Colegio_Unus.cdr",
     ...                   "510x400", {"C", "M"})
-    '510x400_CM_VOPRIX_Envelope_Saco'
+    '510x400_CM_VOPRIX_COLEGIO_UNUS_envelope_saco'
+
+    CLIENTE em maiuscula na frente, produto em minuscula atras. O cliente
+    vem primeiro porque e ele que identifica o trabalho: dois 'Panfleto'
+    no mesmo dia ja bateram de frente na pasta do CTP e sairam como
+    'Panfleto' e 'Panfleto_v2', sem ninguem saber qual era qual.
 
     Com mais de uma pagina, o numero vai no fim: '... 01', '... 02'.
     """
-    nome = "%s_%s_VOPRIX_%s" % (formato, cores_no_nome(tintas) or "K",
-                                resumo_voprix(nome_original))
+    cliente, produto = partes_voprix(nome_original)
+    miolo = "%s_%s" % (cliente, produto) if cliente else produto
+    nome = "%s_%s_VOPRIX_%s" % (formato, cores_no_nome(tintas) or "K", miolo)
     if total > 1:
         nome += " %02d" % (indice + 1)
     nome = PROIBIDOS.sub("", nome)

@@ -55,13 +55,13 @@ def test_nome_da_chapa_por_cliente():
     assert P.nome_da_chapa(P.SOLIDA, "49576 - Cliente - x.pdf", "R1",
                            775, 635, {"C", "M"}, 0, 1) == "49576R1"
     assert P.nome_da_chapa(P.VOPRIX, CDR, "", 510, 400,
-                           {"C", "M"}, 0, 1) == "510x400_CM_VOPRIX_Envelope_Saco"
+                           {"C", "M"}, 0, 1) == "510x400_CM_VOPRIX_COLEGIO_UNUS_envelope_saco"
 
 
 def test_nome_da_chapa_voprix_com_duas_paginas():
     n = "Pasta_Bopp_Orelha_44x31_Colegio_Unus.cdr"
     assert (P.nome_da_chapa(P.VOPRIX, n, "", 510, 400, {"C"}, 1, 2)
-            == "510x400_C_VOPRIX_Pasta_Bopp_Orelha 02")
+            == "510x400_C_VOPRIX_COLEGIO_UNUS_pasta_bopp_orelha 02")
 
 
 # ----------------------------------------------------------------------
@@ -307,7 +307,7 @@ def test_adiado_nao_entra_no_registro(monkeypatch, tmp_path):
 
 def test_nome_diz_gray_quando_a_arte_e_de_uma_cor():
     assert (P.nome_da_chapa(P.VOPRIX, CDR, "", 510, 400, {"GRAY"}, 0, 1)
-            == "510x400_GRAY_VOPRIX_Envelope_Saco")
+            == "510x400_GRAY_VOPRIX_COLEGIO_UNUS_envelope_saco")
 
 
 def test_gray_no_lugar_das_quatro_tintas(monkeypatch, tmp_path):
@@ -332,7 +332,7 @@ def test_gray_no_lugar_das_quatro_tintas(monkeypatch, tmp_path):
 
     assert feito["cinza"] is True
     assert feito["dpi"] == 1000
-    assert feito["base"] == "510x400_GRAY_VOPRIX_Envelope_Saco"
+    assert feito["base"] == "510x400_GRAY_VOPRIX_COLEGIO_UNUS_envelope_saco"
 
 
 def test_arte_colorida_continua_em_quadricromia(monkeypatch, tmp_path):
@@ -355,7 +355,7 @@ def test_arte_colorida_continua_em_quadricromia(monkeypatch, tmp_path):
                       "impresso": None}, lambda m: None)
 
     assert feito["cinza"] is False
-    assert feito["base"] == "510x400_CMYK_VOPRIX_Envelope_Saco"
+    assert feito["base"] == "510x400_CMYK_VOPRIX_COLEGIO_UNUS_envelope_saco"
 
 
 def test_solida_nao_muda(monkeypatch, tmp_path):
@@ -439,7 +439,7 @@ def test_uma_cor_nao_fecha_sozinha(monkeypatch, tmp_path):
     assert r["status"] == "erro" and r["saidas"] == []
     assert "NAO veio em quadricromia" in avisos[0]
     assert "GRAY" in avisos[0]
-    assert "510x400_GRAY_VOPRIX_Envelope_Saco" in avisos[0]   # o que sairia
+    assert "510x400_GRAY_VOPRIX_COLEGIO_UNUS_envelope_saco" in avisos[0]   # o que sairia
     assert "C 0.0608" in avisos[0]                            # os numeros
 
 
@@ -467,7 +467,7 @@ def test_quadricromia_fecha_sozinha(monkeypatch, tmp_path):
 
     r = _roda(tmp_path)
     assert r["status"] == "ok"
-    assert feito["base"] == "510x400_CMYK_VOPRIX_Envelope_Saco"
+    assert feito["base"] == "510x400_CMYK_VOPRIX_COLEGIO_UNUS_envelope_saco"
 
 
 def test_aprovado_fecha_fora_da_quadricromia(monkeypatch, tmp_path):
@@ -486,7 +486,7 @@ def test_aprovado_fecha_fora_da_quadricromia(monkeypatch, tmp_path):
     r = _roda(tmp_path, aprovado=True)
     assert r["status"] == "ok"
     assert feito["cinza"] is True
-    assert feito["base"] == "510x400_GRAY_VOPRIX_Envelope_Saco"
+    assert feito["base"] == "510x400_GRAY_VOPRIX_COLEGIO_UNUS_envelope_saco"
 
 
 def test_solida_de_uma_cor_continua_fechando(monkeypatch, tmp_path):
@@ -556,3 +556,86 @@ def test_corel_de_outra_versao_nao_impede_a_conversao(monkeypatch):
 
     faltaram = CO.ajustar_pdf(Documento())
     assert sorted(faltaram) == sorted(CO.PDF_CORELDRAW)
+
+
+# ----------------------------------------------------------------------
+# Cliente no nome, e o MODELO quando ainda assim dois baterem
+# ----------------------------------------------------------------------
+
+def test_cliente_vem_na_frente_em_maiuscula():
+    """Dois 'Panfleto' no mesmo dia so se distinguem pelo cliente."""
+    from finart_ctp.nomes import nome_saida_voprix
+
+    a = nome_saida_voprix("Panfleto_15,0x21,0_4_0_M3RIN.cdr",
+                          "510x400", set("CMYK"))
+    b = nome_saida_voprix("Panfleto_15,0x21,0_4_0_Natura_Aniversario.cdr",
+                          "510x400", set("CMYK"))
+    assert a == "510x400_CMYK_VOPRIX_M3RIN_panfleto"
+    assert b == "510x400_CMYK_VOPRIX_NATURA_ANIVERSARIO_panfleto"
+    assert a != b
+
+
+def test_cliente_sao_os_dois_ultimos_nomes():
+    from finart_ctp.nomes import partes_voprix
+
+    # dois nomes
+    assert partes_voprix("Panfleto_15,0x21,0_4_0_Natura_Aniversario.cdr") \
+        == ("NATURA_ANIVERSARIO", "panfleto")
+    # um nome so
+    assert partes_voprix("Panfleto_15,0x21,0_4_0_M3RIN.cdr") \
+        == ("M3RIN", "panfleto")
+    # numero de cor e data no fim nao sao nome
+    assert partes_voprix("Papel_Manteiga_15x15_1_0_Kor_31_08.cdr") \
+        == ("KOR", "papel_manteiga")
+    # palavra de ligacao tambem nao
+    assert partes_voprix("Cartaz_29,7x42_4_0_Campeao_Lubrificantes_e_Filtro.cdr") \
+        == ("LUBRIFICANTES_FILTRO", "cartaz")
+
+
+def test_sem_medida_o_cliente_ainda_sai_do_fim():
+    from finart_ctp.nomes import partes_voprix
+
+    assert partes_voprix("Mascara_Pasta_Bolsa_Hauany_Martins.cdr") \
+        == ("HAUANY_MARTINS", "mascara_pasta_bolsa")
+
+
+def test_modelo_renomeia_a_primeira_chapa(tmp_path, monkeypatch):
+    """
+    Combinado: as duas viram MODELO. A que ja estava gravada e renomeada
+    para MODELO 1, para as duas ficarem simetricas.
+    """
+    monkeypatch.setattr(P, "renomear_saida_no_registro", lambda de, para: True)
+    base = "510x400_CMYK_VOPRIX_COLEGIO_UNUS_pasta"
+    (tmp_path / (base + ".pdf")).write_bytes(b"primeira chapa")
+
+    novo, renomeada = P.resolver_modelo(str(tmp_path), base)
+
+    assert novo == base + " MODELO 2"
+    assert renomeada == (base + ".pdf", base + " MODELO 1.pdf")
+    assert (tmp_path / (base + " MODELO 1.pdf")).read_bytes() == b"primeira chapa"
+    assert not (tmp_path / (base + ".pdf")).exists()
+
+
+def test_terceira_arte_continua_a_serie(tmp_path):
+    base = "510x400_CMYK_VOPRIX_COLEGIO_UNUS_pasta"
+    (tmp_path / (base + " MODELO 1.pdf")).write_bytes(b"a")
+    (tmp_path / (base + " MODELO 2.pdf")).write_bytes(b"b")
+
+    novo, renomeada = P.resolver_modelo(str(tmp_path), base)
+    assert novo == base + " MODELO 3"
+    assert renomeada is None            # nao mexe em quem ja esta numerado
+
+
+def test_nome_livre_nao_vira_modelo_a_toa(tmp_path):
+    novo, renomeada = P.resolver_modelo(str(tmp_path), "qualquer_nome")
+    assert novo == "qualquer_nome" and renomeada is None
+
+
+def test_registro_acompanha_a_chapa_renomeada(tmp_path, monkeypatch):
+    """Registro que aponta para chapa inexistente nao serve para nada."""
+    monkeypatch.setattr(U, "PASTA_CONTROLE", str(tmp_path))
+    U.salvar_registro({"k": {"saidas": ["chapa.pdf", "outra.pdf"]}})
+
+    assert U.renomear_saida_no_registro("chapa.pdf", "chapa MODELO 1.pdf")
+    assert U.carregar_registro()["k"]["saidas"] == ["chapa MODELO 1.pdf",
+                                                    "outra.pdf"]
