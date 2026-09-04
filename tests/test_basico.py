@@ -3,9 +3,17 @@
 
 import pytest
 
+import finart_ctp.utils as U
 from finart_ctp.pdf_builder import _tint_transform
 from finart_ctp.processador import identificar_formato
 from finart_ctp.utils import normalizar
+
+
+@pytest.fixture(autouse=True)
+def fora_da_maquina(monkeypatch, tmp_path):
+    """Nada de teste encosta nas pastas de verdade desta maquina."""
+    monkeypatch.setattr(U, "PASTA_PENDENCIAS", str(tmp_path / "_pend_teste"))
+    monkeypatch.setattr(U, "PASTA_CONTROLE", str(tmp_path / "_ctrl_teste"))
 
 
 def test_formato_chapa_pequena():

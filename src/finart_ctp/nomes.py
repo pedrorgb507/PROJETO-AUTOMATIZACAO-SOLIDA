@@ -19,6 +19,9 @@ Regra: SO o numero da OS, mais nada. A descricao do arquivo de origem
 
 import os
 import re
+import unicodedata
+
+from .config import PALAVRAS_MATERIAL
 
 PROIBIDOS = re.compile(r'[\/:*?"<>|]')
 
@@ -137,5 +140,75 @@ def nome_saida_voprix(nome_original, formato, tintas, indice=0, total=1):
                                 resumo_voprix(nome_original))
     if total > 1:
         nome += " %02d" % (indice + 1)
+    nome = PROIBIDOS.sub("", nome)
+    return re.sub(r"\s+", " ", nome).strip()
+
+
+# ======================================================================
+# FIALHO BRINDES
+# ======================================================================
+# O nome de entrada nao segue padrao nenhum - e o titulo que a pessoa deu
+# ao arquivo:
+#
+#     FORRO AGENDA unicidades  2027.pdf
+#     MIOLO caderno sicoob montagen formato 48x66 9 imagem 2 chapas.pdf
+#     divisoria colorida  montagem para agenda de dobra.pdf
+#
+# A chapa se chama pelo NOME PRINCIPAL do servico, que quase sempre e o
+# cliente final - 'forro', 'miolo', 'caderno' sao tipo de material e nao
+# identificam trabalho nenhum:
+#
+#     510x400_FIALHO_UNICIDADES 01
+#     730x600_FIALHO_SICOOB 01
+#
+# Nao sobrando nome principal, o nome do arquivo inteiro serve, limpo:
+#
+#     510x400_FIALHO_DIVISORIA COLORIDA MONTAGEM PARA AGENDA DE DOBRA 01
+
+MEDIDA_SOLTA = re.compile(r"^\d+X\d+$")
+
+
+def limpo(texto):
+    """'INTRODUÇÃO  unicidades' -> 'INTRODUCAO UNICIDADES'."""
+    sem_acento = unicodedata.normalize("NFKD", texto)
+    sem_acento = "".join(c for c in sem_acento if not unicodedata.combining(c))
+    so_util = re.sub(r"[^A-Za-z0-9 ]+", " ", sem_acento)
+    return re.sub(r"\s+", " ", so_util).strip().upper()
+
+
+def _e_descartavel(palavra):
+    """Palavra que nao identifica o servico: material, medida, numero."""
+    return (palavra in PALAVRAS_MATERIAL
+            or palavra.isdigit()
+            or len(palavra) == 1
+            or bool(MEDIDA_SOLTA.match(palavra)))
+
+
+def resumo_fialho(nome):
+    """
+    'FORRO AGENDA unicidades  2027.pdf' -> 'UNICIDADES'
+
+    O que sobra depois de tirar tipo de material, medida e numero. Se nao
+    sobrar nada, devolve o nome do arquivo inteiro, limpo - e melhor um
+    nome comprido do que uma chapa sem nome.
+    """
+    base = limpo(os.path.splitext(os.path.basename(nome))[0])
+    principais = [p for p in base.split(" ") if p and not _e_descartavel(p)]
+    return " ".join(principais) if principais else base
+
+
+def nome_saida_fialho(nome_original, formato, sequencia):
+    """
+    Nome (sem .pdf) da chapa que vai para o CTP.
+
+    >>> nome_saida_fialho("FORRO AGENDA unicidades  2027.pdf", "510x400", 1)
+    '510x400_FIALHO_UNICIDADES 01'
+
+    A sequencia e do DIA e do trabalho, nao do arquivo: as 11 chapas de
+    UNICIDADES de um dia saem 01 a 11 mesmo vindo de tres PDFs diferentes.
+    Quem conta e o processador, olhando a pasta de saida.
+    """
+    nome = "%s_FIALHO_%s %02d" % (formato, resumo_fialho(nome_original),
+                                  sequencia)
     nome = PROIBIDOS.sub("", nome)
     return re.sub(r"\s+", " ", nome).strip()

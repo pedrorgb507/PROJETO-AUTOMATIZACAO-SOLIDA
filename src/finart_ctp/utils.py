@@ -3,11 +3,13 @@
 
 import json
 import os
+import shutil
 import time
 import unicodedata
 from datetime import datetime, timedelta
 
-from .config import HORA_VIRADA, MESES, PASTA_CONTROLE, REGISTRO
+from .config import (HORA_VIRADA, MESES, PASTA_CONTROLE, PASTA_PENDENCIAS,
+                     REGISTRO)
 
 
 # ----------------------------------------------------------------------
@@ -96,6 +98,11 @@ def anotar_pendencia(arquivo, motivo):
     print(barra, flush=True)
     print("")
     log("PENDENCIA: %s | %s" % (arquivo, motivo), alerta=True)
+    anotar_no_arquivo(arquivo, motivo)
+
+
+def anotar_no_arquivo(arquivo, motivo):
+    """Uma linha no _PENDENCIAS.txt, sem o alarde na tela."""
     try:
         os.makedirs(PASTA_CONTROLE, exist_ok=True)
         with open(os.path.join(PASTA_CONTROLE, "_PENDENCIAS.txt"), "a",
@@ -104,6 +111,30 @@ def anotar_pendencia(arquivo, motivo):
                                       arquivo, motivo) + chr(10))
     except Exception:
         pass
+
+
+def guardar_para_a_mao(caminho, nome_original):
+    """
+    Move para a PASTA_PENDENCIAS o arquivo que o programa nao deu conta.
+
+    E o PDF que a Corel gerou. Guardando ele, o trabalho da conversao nao
+    se perde: o operador abre esse PDF no Photoshop/InDesign, como sempre
+    fez, em vez de converter o .cdr outra vez - que e a parte demorada.
+
+    Devolve o caminho final, ou None se nem isso deu certo.
+    """
+    try:
+        os.makedirs(PASTA_PENDENCIAS, exist_ok=True)
+        base = os.path.splitext(os.path.basename(nome_original))[0]
+        destino = nome_livre(PASTA_PENDENCIAS, base)
+        shutil.move(caminho, destino)
+        anotar_no_arquivo(os.path.basename(nome_original),
+                          "PDF convertido guardado em %s" % destino)
+        return destino
+    except Exception as e:
+        log("Nao consegui guardar o PDF em %s: %s" % (PASTA_PENDENCIAS, e),
+            alerta=True)
+        return None
 
 
 def pendencias_abertas(limite=20):

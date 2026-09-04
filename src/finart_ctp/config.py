@@ -26,6 +26,47 @@ SUBPASTA_SAIDA = "FIA"
 # separacao chegam a varios GB: nao podem passar pela rede.
 PASTA_CONTROLE = r"C:\CTP\_controle"
 
+# Onde fica o que precisou de gente. Quando um arquivo da VOPRIX nao da
+# para processar - grande demais, ilegivel -, o PDF que a Corel ja gerou
+# e guardado aqui em vez de ser jogado fora. Assim o operador continua do
+# ponto onde o programa parou (abre no Photoshop/InDesign, como sempre
+# fez) sem converter o .cdr de novo, que e a parte demorada.
+#
+# Fica no disco local: esses arquivos passam de 500 MB e nao podem entupir
+# a rede. Limpe a pasta de tempos em tempos.
+PASTA_PENDENCIAS = r"C:\CTP\_pendencias"
+
+# ----------------------------------------------------------------------
+# SEGUNDO CLIENTE: VOPRIX
+# ----------------------------------------------------------------------
+# Mesma arvore de pastas da SOLIDA (dentro da base: MES\DIA), so que numa
+# base propria. A diferenca esta no que chega e em como sai:
+#
+#   - a arte vem em .cdr, ja montada no tamanho da chapa. O CorelDRAW
+#     desta maquina converte para PDF antes de qualquer coisa (corel.py);
+#   - o nome de saida nao e por OS: e 510x400_CM_VOPRIX_Envelope_Saco.
+#
+# As chapas caem na MESMA pasta FIA do dia da SOLIDA - o proprio nome ja
+# diz de quem e, entao nao ha o que confundir.
+#
+# Deixe None para o programa vigiar so a SOLIDA.
+BASE_ENTRADA_VOPRIX = r"X:\VOPRIX"
+
+# ----------------------------------------------------------------------
+# TERCEIRO CLIENTE: FIALHO BRINDES
+# ----------------------------------------------------------------------
+# Mesma arvore MES\DIA, base propria. O que muda e que o Fialho manda de
+# tudo: PDF pronto no tamanho da chapa, PDF fora de tamanho, arquivo em
+# Corel, arte que ainda precisa ser montada.
+#
+# PADRAO TEMPORARIO, combinado com o operador: so anda o que chega em PDF
+# ja no tamanho final da chapa (510x400 ou 730x600). Qualquer outra coisa
+# PARA e vira pendencia - nao se da andamento no servico. Conforme os
+# casos forem aparecendo, a gente amplia.
+#
+# Deixe None para nao vigiar essa pasta.
+BASE_ENTRADA_FIALHO = r"X:\FIALHO"
+
 # ----------------------------------------------------------------------
 # FORMATOS ACEITOS
 # ----------------------------------------------------------------------
@@ -36,6 +77,13 @@ FORMATOS = {
     (775, 635): (800,  "R1"),
 }
 
+# O Fialho tem a propria tabela: a chapa grande dele e 730x600, que nao
+# existe na Solida. O formato entra no nome, entao aqui nao ha sufixo.
+FORMATOS_FIALHO = {
+    (510, 400): (1000, ""),
+    (730, 600): (800,  ""),
+}
+
 TOLERANCIA_MM = 3
 
 # Etiqueta escrita no canto da folha de prova, fora da arte, para quem
@@ -43,6 +91,50 @@ TOLERANCIA_MM = 3
 ROTULOS_PROVA = {
     (510, 400): "SOLIDA F4",
     (775, 635): "SOLIDA F2",
+}
+
+# A mesma etiqueta, para as provas da VOPRIX. Uma tabela por cliente
+# porque quem pega o papel precisa saber tambem de quem e a chapa.
+ROTULOS_PROVA_VOPRIX = {
+    (510, 400): "VOPRIX F4",
+    (775, 635): "VOPRIX F2",
+}
+
+ROTULOS_PROVA_FIALHO = {
+    (510, 400): "FIALHO F4",
+    (730, 600): "FIALHO F2",
+}
+
+# ----------------------------------------------------------------------
+# NOME DE SAIDA DO FIALHO
+# ----------------------------------------------------------------------
+# A chapa dele se chama pelo NOME PRINCIPAL do servico - quase sempre o
+# cliente final:
+#
+#     FORRO AGENDA unicidades 2027.pdf  ->  510x400_FIALHO_UNICIDADES 01
+#
+# 'forro', 'miolo', 'capa' sao tipo de material, nao nome de servico. A
+# lista abaixo e o que o programa joga fora ao procurar o nome principal;
+# numero solto e medida (48x66) tambem caem. Se nao sobrar nada, o nome do
+# arquivo inteiro vira o nome, em maiuscula e sem acento.
+#
+# ESTA LISTA E PARA CRESCER: toda vez que uma chapa sair com nome errado,
+# a correcao costuma ser acrescentar a palavra aqui.
+PALAVRAS_MATERIAL = {
+    # material e tipo de peca
+    "FORRO", "MIOLO", "CAPA", "PASTA", "DIVISORIA", "INTRODUCAO", "AGENDA",
+    "CADERNO", "CALENDARIO", "ENVELOPE", "BLOCO", "BLOCOS", "GRADE", "DOBRA",
+    "FOLHA", "FOLHAS", "ADESIVO", "CARTAO", "TAG", "ETIQUETA", "PANFLETO",
+    # o que se faz com a peca
+    "MONTAGEM", "MONTAGEN", "CORRECAO", "PROVA", "REGISTRO", "GABARITO",
+    "FRENTE", "VERSO", "FINAL", "NOVO", "NOVA", "MODELO", "COLORIDA",
+    "COLORIDO", "EMPRESARIAL", "DADOS", "PESSOAIS", "PROTOCOLO", "JANELA",
+    # palavras de medida e contagem
+    "FORMATO", "IMAGEM", "IMAGENS", "CHAPA", "CHAPAS", "PAGINA", "PAGINAS",
+    "TAMANHO", "COPIA", "SEGURANCA",
+    # ligacao
+    "DE", "DA", "DO", "DAS", "DOS", "E", "COM", "SEM", "PARA", "POR", "EM",
+    "A", "O", "AS", "OS", "NO", "NA",
 }
 
 # ----------------------------------------------------------------------
@@ -69,6 +161,16 @@ TAMANHO_MAXIMO_MB = 500
 IMPRIMIR_ORIGINAL = True
 IMPRESSORA = "NOME DA IMPRESSORA NO WINDOWS"
 ESPERA_IMPRESSORA = 300        # segundos entre tentativas (5 min)
+
+# A VOPRIX so fecha sozinha o que vem em quadricromia. Arte de 1, 2 ou 3
+# cores - ou em escala de cinza - PARA antes de gerar a chapa: a prova sai
+# do mesmo jeito, o PDF convertido fica guardado na PASTA_PENDENCIAS e o
+# aviso aparece na tela, com a cobertura de cada tinta, para alguem
+# conferir. Quem manda fechar depois e gente.
+#
+# Pedido do operador: em quadricromia o caminho e sempre o mesmo, mas arte
+# de uma cor ou de duas e onde a decisao muda de trabalho para trabalho.
+AVISAR_QUANDO_NAO_FOR_CMYK = True
 
 # Se voce vira a noite, a pasta do dia so troca depois desta hora.
 HORA_VIRADA = 0
