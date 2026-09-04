@@ -22,10 +22,11 @@ import shutil
 import tempfile
 import time
 
-from .config import (AVISAR_QUANDO_NAO_FOR_CMYK, FORMATOS, FORMATOS_FIALHO,
-                     IMPRESSORA, IMPRIMIR_ORIGINAL, NOMES_TINTA,
-                     PASTA_CONTROLE, ROTULOS_PROVA, ROTULOS_PROVA_FIALHO,
-                     ROTULOS_PROVA_VOPRIX, TAMANHO_MAXIMO_MB, TOLERANCIA_MM)
+from .config import (AVISAR_QUANDO_NAO_FOR_CMYK, ENCAIXE_MAXIMO_MM, FORMATOS,
+                     FORMATOS_FIALHO, IMPRESSORA, IMPRIMIR_ORIGINAL,
+                     NOMES_TINTA, PASTA_CONTROLE, ROTULOS_PROVA,
+                     ROTULOS_PROVA_FIALHO, ROTULOS_PROVA_VOPRIX,
+                     TAMANHO_MAXIMO_MB, TOLERANCIA_MM)
 from .corel import ArquivoEmUso, publicar_pdf
 from .ghostscript import (LIMIAR_TINTA, cobertura_por_pagina, sem_cor_gritante,
                           separar_cinza, separar_tintas, tintas_da_cobertura)
@@ -87,6 +88,64 @@ def formato_no_nome(larg, alt, cliente=SOLIDA):
     return "%dx%d" % chave if chave else ""
 
 
+def encaixar_formato(larg, alt, cliente=SOLIDA):
+    """
+    Chapa em que essa arte cabe centralizada, ou None.
+
+    So o FIALHO. A arte dele as vezes vem alguns milimetros fora da
+    chapa: o 'CAPA Agenda PAULISTA 2027.pdf' mede 520x400 e e chapa
+    510x400. Ate ENCAIXE_MAXIMO_MM de diferenca a arte entra
+    centralizada - CORTANDO 5 mm de cada lado, no caso dele.
+
+    E corte mesmo, nao reducao: nada e redimensionado, para a arte
+    chegar na chapa do tamanho que foi desenhada. Por isso o limite e
+    curto - acima dele ninguem sabe o que pode ser cortado.
+    """
+    if cliente != FIALHO:
+        return None
+    medido = sorted([larg, alt])
+    for chave in formatos_do_cliente(cliente):
+        alvo = sorted(chave)
+        if (abs(medido[0] - alvo[0]) <= ENCAIXE_MAXIMO_MM and
+                abs(medido[1] - alvo[1]) <= ENCAIXE_MAXIMO_MM):
+            return chave
+    return None
+
+
+def chapa_no_sentido(chave, larg, alt):
+    """A chapa virada no mesmo sentido da arte: (510,400) ou (400,510)."""
+    menor, maior = sorted(chave)
+    return (menor, maior) if larg <= alt else (maior, menor)
+
+
+def chapa_da_pagina(larg, alt, cliente=SOLIDA):
+    """
+    (chapa_em_mm, dpi, sufixo, encaixou) da pagina, pela tabela do cliente.
+
+    Primeiro a medida exata, dentro da TOLERANCIA_MM. Nao achando, tenta
+    encaixar - e ai a chapa devolvida e a do CADASTRO, nao a da arte,
+    porque o que vai ser gravado tem o tamanho da chapa.
+
+    Sem chapa nenhuma: (None, None, None, False).
+    """
+    chave = casar_formato(larg, alt, cliente)
+    if chave:
+        dpi, sufixo = formatos_do_cliente(cliente)[chave]
+        return (larg, alt), dpi, sufixo, False
+
+    chave = encaixar_formato(larg, alt, cliente)
+    if chave:
+        dpi, sufixo = formatos_do_cliente(cliente)[chave]
+        return chapa_no_sentido(chave, larg, alt), dpi, sufixo, True
+
+    return None, None, None, False
+
+
+def pixels_da_chapa(larg_mm, alt_mm, dpi):
+    """Quantos pixels a chapa tem no dpi de gravacao."""
+    return (int(round(larg_mm / 25.4 * dpi)), int(round(alt_mm / 25.4 * dpi)))
+
+
 def chapas_aceitas(cliente=SOLIDA):
     """'510x400 ou 730x600' - para dizer no aviso o que era esperado."""
     return " ou ".join("%dx%d" % c for c in formatos_do_cliente(cliente))
@@ -99,7 +158,9 @@ def rotulo_prova(larg, alt, cliente=SOLIDA):
         tabela = ROTULOS_PROVA_VOPRIX
     elif cliente == FIALHO:
         tabela = ROTULOS_PROVA_FIALHO
-    return tabela.get(casar_formato(larg, alt, cliente), "")
+    chave = casar_formato(larg, alt, cliente) or encaixar_formato(larg, alt,
+                                                                  cliente)
+    return tabela.get(chave, "")
 
 
 def pagina_de_uma_cor(cob, folga=0.02):
@@ -187,12 +248,15 @@ def converter_cdr(caminho):
 
 
 def _gerar_chapa(origem, pasta_saida, base, pagina, dpi, larg, alt, usadas,
-                 cinza=False):
+                 cinza=False, alvo=None):
     """
     Separa uma pagina e monta o PDF final. Devolve o caminho gerado.
 
     Com cinza=True sai UMA chapa em escala de cinza, no lugar das quatro
     da quadricromia: e o caso da arte de uma cor so.
+
+    Com 'alvo' (largura, altura em pixels), a arte entra centralizada no
+    tamanho da chapa - sobra cortada, falta em branco.
 
     Os TIFFs da separacao ficam SEMPRE no disco local: sao varios GB e
     passar isso pela rede tornaria tudo lento.
@@ -203,7 +267,7 @@ def _gerar_chapa(origem, pasta_saida, base, pagina, dpi, larg, alt, usadas,
         if cinza:
             tif = separar_cinza(origem, dpi, tmp, pagina)
             saida = nome_livre(pasta_saida, base)
-            return saida, montar_pdf_cinza(tif, saida, larg, alt)
+            return saida, montar_pdf_cinza(tif, saida, larg, alt, alvo=alvo)
 
         separar_tintas(origem, dpi, tmp, pagina)
 
@@ -223,7 +287,7 @@ def _gerar_chapa(origem, pasta_saida, base, pagina, dpi, larg, alt, usadas,
             raise RuntimeError("nenhuma tinta encontrada na pagina %d" % pagina)
 
         saida = nome_livre(pasta_saida, base)
-        letras = montar_pdf(tifs, saida, larg, alt)
+        letras = montar_pdf(tifs, saida, larg, alt, alvo=alvo)
         return saida, letras
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
@@ -333,8 +397,8 @@ def _processar_pdf(pdf, nome, pasta_saida, cliente, resultado, falhar,
 
     # PASSO 1: prova impressa, com a arte inteira. So vale a pena gastar
     # papel se alguma pagina tiver formato conhecido.
-    if IMPRIMIR_ORIGINAL and any(identificar_formato(l, a, cliente)[0]
-                                 for l, a in medidas):
+    if IMPRIMIR_ORIGINAL and any(chapa_da_pagina(larg, alt, cliente)[1]
+                                 for larg, alt in medidas):
         try:
             etiquetas = [rotulo_prova(l, a, cliente) for l, a in medidas]
             _, folhas = imprimir(pdf, etiquetas=etiquetas)
@@ -350,7 +414,7 @@ def _processar_pdf(pdf, nome, pasta_saida, cliente, resultado, falhar,
             return resultado
 
     for i, (larg, alt) in enumerate(medidas):
-        dpi, sufixo = identificar_formato(larg, alt, cliente)
+        chapa, dpi, sufixo, encaixou = chapa_da_pagina(larg, alt, cliente)
 
         if not dpi:
             motivo = ("pagina %d: %.0f x %.0f mm nao e chapa (%s)"
@@ -361,6 +425,13 @@ def _processar_pdf(pdf, nome, pasta_saida, cliente, resultado, falhar,
             anotar_pendencia(nome, motivo)
             problemas.append(motivo)
             continue
+
+        larg_chapa, alt_chapa = chapa
+        alvo = pixels_da_chapa(larg_chapa, alt_chapa, dpi) if encaixou else None
+        if encaixou:
+            log("   p%d: arte %.0fx%.0f mm entra centralizada na chapa "
+                "%.0fx%.0f - sobra cortada dos dois lados"
+                % (i + 1, larg, alt, larg_chapa, alt_chapa), alerta=True)
 
         cob = cobertura[i] if i < len(cobertura) else None
         usadas = tintas_da_cobertura(cob) if cob else set("CMYK")
@@ -376,10 +447,11 @@ def _processar_pdf(pdf, nome, pasta_saida, cliente, resultado, falhar,
                 "uma cor, a chapa sai em escala de cinza"
                 % (i + 1, cob["C"], cob["M"], cob["Y"], cob["K"]), alerta=True)
 
-        base = nome_da_chapa(cliente, nome, sufixo, larg, alt, usadas, i,
-                             total, pasta_saida)
+        base = nome_da_chapa(cliente, nome, sufixo, larg_chapa, alt_chapa,
+                             usadas, i, total, pasta_saida)
         log("   p%d -> %s | %.0fx%.0f mm | %d dpi | tintas: %s"
-            % (i + 1, base, larg, alt, dpi, "".join(sorted(usadas)) or "?"))
+            % (i + 1, base, larg_chapa, alt_chapa, dpi,
+               "".join(sorted(usadas)) or "?"))
 
         # Quadricromia fecha sozinha. Fora dela, quem manda fechar e gente:
         # o programa para aqui, com os numeros na tela, e guarda o PDF.
@@ -405,7 +477,8 @@ def _processar_pdf(pdf, nome, pasta_saida, cliente, resultado, falhar,
         inicio = time.time()
         try:
             saida, letras = _gerar_chapa(pdf, pasta_saida, base, i + 1,
-                                         dpi, larg, alt, usadas, cinza)
+                                         dpi, larg_chapa, alt_chapa, usadas,
+                                         cinza, alvo)
         except Exception as e:
             motivo = "pagina %d: %s" % (i + 1, e)
             log("   FALHOU: %s" % motivo, alerta=True)

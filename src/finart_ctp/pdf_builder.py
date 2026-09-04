@@ -45,14 +45,47 @@ def _gravar(saida, objs, fluxos):
                 % (len(objs) + 1, xref))
 
 
-def _comprimir(imgs, w, h, linhas_bloco):
-    """Entrelaca as bandas em faixas e comprime tudo de uma vez."""
+def _faixa_centralizada(im, y0, y1, alvo_w, dx, dy, fundo):
+    """
+    Um pedaco horizontal da imagem, ja no tamanho da chapa.
+
+    O que sobra da arte e cortado, o que falta vira 'fundo' (255, que e
+    branco tanto no tiffsep invertido quanto no tiffgray).
+    """
+    from PIL import Image
+    faixa = Image.new(im.mode, (alvo_w, y1 - y0), fundo)
+    origem_y0 = max(0, y0 - dy)                  # o que da arte cai aqui
+    origem_y1 = min(im.height, y1 - dy)
+    if origem_y1 > origem_y0:
+        pedaco = im.crop((0, origem_y0, im.width, origem_y1))
+        faixa.paste(pedaco, (dx, origem_y0 + dy - y0))    # paste corta sozinho
+    return faixa
+
+
+def _comprimir(imgs, w, h, linhas_bloco, alvo=None):
+    """
+    Entrelaca as bandas em faixas e comprime tudo de uma vez.
+
+    Com 'alvo' (largura, altura em pixels), a arte entra CENTRALIZADA
+    nesse tamanho: sobra cortada dos dois lados, falta preenchida de
+    branco. E feito faixa a faixa, e nao numa imagem inteira - uma chapa
+    de 1000 dpi tem 316 milhoes de pixels POR TINTA, e montar isso na
+    memoria derrubaria a maquina.
+    """
     n = len(imgs)
+    alvo_w, alvo_h = alvo if alvo else (w, h)
+    dx, dy = (alvo_w - w) // 2, (alvo_h - h) // 2
+    centralizar = (alvo_w, alvo_h) != (w, h)
+
     comp = zlib.compressobj(6)
     partes = []
-    for y0 in range(0, h, linhas_bloco):
-        y1 = min(y0 + linhas_bloco, h)
-        faixas = [im.crop((0, y0, w, y1)).tobytes() for im in imgs]
+    for y0 in range(0, alvo_h, linhas_bloco):
+        y1 = min(y0 + linhas_bloco, alvo_h)
+        if centralizar:
+            faixas = [_faixa_centralizada(im, y0, y1, alvo_w, dx, dy,
+                                          255).tobytes() for im in imgs]
+        else:
+            faixas = [im.crop((0, y0, w, y1)).tobytes() for im in imgs]
         if n == 1:
             bloco = faixas[0]
         else:
@@ -66,7 +99,8 @@ def _comprimir(imgs, w, h, linhas_bloco):
     return b"".join(partes)
 
 
-def montar_pdf_cinza(tif, saida, larg_mm, alt_mm, linhas_bloco=256):
+def montar_pdf_cinza(tif, saida, larg_mm, alt_mm, linhas_bloco=256,
+                     alvo=None):
     """
     Chapa unica em /DeviceGray, a partir do TIFF do tiffgray.
 
@@ -82,7 +116,9 @@ def montar_pdf_cinza(tif, saida, larg_mm, alt_mm, linhas_bloco=256):
     if im.mode != "L":
         im = im.convert("L")
     w, h = im.size
-    dados = _comprimir([im], w, h, linhas_bloco)
+    dados = _comprimir([im], w, h, linhas_bloco, alvo)
+    if alvo:
+        w, h = alvo
     im.close()
 
     lw = larg_mm / 25.4 * 72
@@ -104,7 +140,7 @@ def montar_pdf_cinza(tif, saida, larg_mm, alt_mm, linhas_bloco=256):
     return ["GRAY"]
 
 
-def montar_pdf(tifs, saida, larg_mm, alt_mm, linhas_bloco=256):
+def montar_pdf(tifs, saida, larg_mm, alt_mm, linhas_bloco=256, alvo=None):
     """
     tifs: {"M": "caminho.tif", "K": "caminho.tif"} vindos do tiffsep
           (0 = tinta cheia, 255 = sem tinta -> invertido pelo /Decode)
@@ -118,15 +154,17 @@ def montar_pdf(tifs, saida, larg_mm, alt_mm, linhas_bloco=256):
     letras += [k for k in tifs if k not in NOMES_TINTA.values()]
     n = len(letras)
 
-    imgs = [Image.open(tifs[l]) for l in letras]
+    imgs = [Image.open(tifs[letra]) for letra in letras]
     w, h = imgs[0].size
-    dados = _comprimir(imgs, w, h, linhas_bloco)
+    dados = _comprimir(imgs, w, h, linhas_bloco, alvo)
+    if alvo:
+        w, h = alvo
     for im in imgs:
         im.close()
 
     lw = larg_mm / 25.4 * 72
     lh = alt_mm / 25.4 * 72
-    nomes = " ".join(CMYK_PDF.get(l, "/" + l) for l in letras)
+    nomes = " ".join(CMYK_PDF.get(letra, "/" + letra) for letra in letras)
     decode = " ".join(["1 0"] * n)
     dominio = " ".join(["0 1"] * n)
     func = _tint_transform(letras).encode("latin-1")

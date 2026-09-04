@@ -125,8 +125,32 @@ O que **para e não anda**:
 
 - arquivo em `.cdr` — montagem ainda é na mão. O programa enxerga o arquivo só
   para avisar; arquivo ignorado em silêncio é serviço que ninguém lembra de fazer;
-- página fora de medida. `CAPA Agenda PAULISTA 2027.pdf` mede 520×400 — 10 mm
-  fora, longe da tolerância de 3 mm — e o aviso diz o que era esperado.
+- página longe de qualquer chapa — o aviso diz o que era esperado.
+
+### Arte quase do tamanho da chapa entra centralizada
+
+A arte do Fialho às vezes vem alguns milímetros fora: o `CAPA Agenda PAULISTA
+2027.pdf` mede **520×400** e é chapa **510×400**. Até `ENCAIXE_MAXIMO_MM` (15 mm)
+de diferença, ela entra **centralizada** na chapa mais próxima:
+
+- o que **sobra é cortado**, igualmente dos dois lados — 5 mm de cada lado, no
+  caso do Paulista;
+- o que **falta vira branco**, também dividido igualmente.
+
+É corte, não redução: **nada é redimensionado**, para a arte chegar na chapa do
+tamanho em que foi desenhada. Por isso o limite é curto — acima dele ninguém
+sabe o que pode ser cortado, e o arquivo vira pendência como antes.
+
+A chapa sai com o tamanho e o nome da **chapa**, não da arte:
+`510x400_FIALHO_PAULISTA 01`. E o log avisa toda vez que centralizou:
+
+```
+>>> p1: arte 520x400 mm entra centralizada na chapa 510x400
+    - sobra cortada dos dois lados
+```
+
+O encaixe vale **só para o Fialho**. Cortar arte no escuro não foi combinado com
+mais ninguém.
 
 ### O nome da chapa é o nome principal do serviço
 

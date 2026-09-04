@@ -86,6 +86,16 @@ FORMATOS_FIALHO = {
 
 TOLERANCIA_MM = 3
 
+# ENCAIXE (so FIALHO). Ate esta diferenca, arte que nao bate com nenhuma
+# chapa entra CENTRALIZADA na chapa mais proxima: o que sobra e cortado
+# igualmente dos dois lados, o que falta vira branco.
+#
+# Combinado com o operador para o caso real do 'CAPA Agenda PAULISTA
+# 2027.pdf', que mede 520x400 e e chapa 510x400 - os 5 mm de cada lado
+# nao tem nada. ACIMA deste limite ninguem adivinha o que pode ser
+# cortado, entao vira pendencia como antes.
+ENCAIXE_MAXIMO_MM = 15
+
 # Etiqueta escrita no canto da folha de prova, fora da arte, para quem
 # pega o papel saber de que chapa se trata.
 ROTULOS_PROVA = {

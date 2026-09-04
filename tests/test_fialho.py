@@ -117,9 +117,42 @@ def test_formato_da_solida_nao_vale_no_fialho():
     assert P.identificar_formato(730, 600) == (None, None)
 
 
-def test_520x400_de_hoje_nao_passa():
-    """O CAPA Agenda PAULISTA que chegou 09:02 mede 520x400."""
+def test_520x400_nao_bate_exato_mas_encaixa():
+    """O CAPA Agenda PAULISTA mede 520x400: 10 mm fora, e chapa 510x400."""
     assert P.identificar_formato(520, 400, P.FIALHO) == (None, None)
+    assert P.encaixar_formato(520, 400, P.FIALHO) == (510, 400)
+
+    chapa, dpi, _, encaixou = P.chapa_da_pagina(520, 400, P.FIALHO)
+    assert (chapa, dpi, encaixou) == ((510, 400), 1000, True)
+
+
+def test_encaixe_respeita_o_sentido_da_arte():
+    """Arte em pe encaixa na chapa em pe: nada e girado nem esticado."""
+    chapa, _, _, encaixou = P.chapa_da_pagina(400, 520, P.FIALHO)
+    assert chapa == (400, 510) and encaixou
+
+
+def test_arte_longe_da_chapa_nao_encaixa():
+    """Acima do limite ninguem sabe o que pode ser cortado."""
+    assert P.encaixar_formato(600, 400, P.FIALHO) is None
+    assert P.chapa_da_pagina(600, 400, P.FIALHO)[1] is None
+
+
+def test_encaixe_nao_vale_para_os_outros_clientes():
+    """Corte as cegas so foi combinado com o Fialho."""
+    assert P.encaixar_formato(520, 400, P.SOLIDA) is None
+    assert P.encaixar_formato(520, 400, P.VOPRIX) is None
+    assert P.chapa_da_pagina(520, 400, P.SOLIDA)[1] is None
+
+
+def test_medida_exata_nao_mexe_no_tamanho_da_arte():
+    """Batendo na tolerancia, a chapa sai do tamanho que a arte tem."""
+    chapa, dpi, _, encaixou = P.chapa_da_pagina(512, 398, P.FIALHO)
+    assert chapa == (512, 398) and dpi == 1000 and not encaixou
+
+
+def test_etiqueta_sai_mesmo_quando_a_arte_so_encaixa():
+    assert P.rotulo_prova(520, 400, P.FIALHO) == "FIALHO F4"
 
 
 def test_etiqueta_da_prova_do_fialho():
@@ -158,9 +191,38 @@ def test_fialho_nao_exige_numero_de_os(monkeypatch, tmp_path):
     assert "nao achei numero de OS" not in r["motivo"]
 
 
-def test_pagina_fora_de_medida_vira_pendencia(monkeypatch, tmp_path):
-    """520x400: a chapa nao sai e o aviso diz o que era esperado."""
+def test_520x400_fecha_centralizado_na_510x400(monkeypatch, tmp_path):
+    """O CAPA Agenda PAULISTA: entra centralizado, 5 mm cortados por lado."""
     monkeypatch.setattr(P, "medir_paginas", lambda pdf: [(520, 400)])
+    monkeypatch.setattr(P, "cobertura_por_pagina",
+                        lambda pdf: [{"C": .1, "M": .1, "Y": .1, "K": .1}])
+    monkeypatch.setattr(P, "IMPRIMIR_ORIGINAL", False)
+    feito = {}
+
+    def gerar(origem, saida, base, pagina, dpi, larg, alt, usadas,
+              cinza=False, alvo=None):
+        feito.update(base=base, chapa=(larg, alt), alvo=alvo, dpi=dpi)
+        return os.path.join(saida, base + ".pdf"), ["C", "M", "Y", "K"]
+
+    monkeypatch.setattr(P, "_gerar_chapa", gerar)
+    monkeypatch.setattr(os.path, "getsize", lambda c: 1000)
+    monkeypatch.setattr(P, "anotar_pendencia",
+                        lambda *a: pytest.fail("nao e mais pendencia"))
+
+    r = P._processar_pdf("x.pdf", "CAPA Agenda PAULISTA  2027.pdf",
+                         str(tmp_path), P.FIALHO,
+                         {"status": "ok", "saidas": [], "motivo": "",
+                          "impresso": None}, lambda m: None)
+
+    assert r["status"] == "ok"
+    assert feito["base"] == "510x400_FIALHO_PAULISTA 01"   # nome pela CHAPA
+    assert feito["chapa"] == (510, 400)                    # pagina do PDF
+    assert feito["alvo"] == (20079, 15748)                 # 510x400 a 1000 dpi
+
+
+def test_pagina_longe_da_medida_ainda_vira_pendencia(monkeypatch, tmp_path):
+    """600x400 esta longe demais: continua parando, como antes."""
+    monkeypatch.setattr(P, "medir_paginas", lambda pdf: [(600, 400)])
     monkeypatch.setattr(P, "cobertura_por_pagina",
                         lambda pdf: [{"C": .1, "M": .1, "Y": .1, "K": .1}])
     monkeypatch.setattr(P, "IMPRIMIR_ORIGINAL", False)
@@ -170,13 +232,12 @@ def test_pagina_fora_de_medida_vira_pendencia(monkeypatch, tmp_path):
     monkeypatch.setattr(P, "anotar_pendencia",
                         lambda arq, motivo: avisos.append(motivo))
 
-    r = P._processar_pdf("x.pdf", "CAPA Agenda PAULISTA  2027.pdf",
-                         str(tmp_path), P.FIALHO,
+    r = P._processar_pdf("x.pdf", "arte torta.pdf", str(tmp_path), P.FIALHO,
                          {"status": "ok", "saidas": [], "motivo": "",
                           "impresso": None}, lambda m: None)
 
     assert r["status"] == "erro" and r["saidas"] == []
-    assert "520 x 400 mm nao e chapa" in avisos[0]
+    assert "600 x 400 mm nao e chapa" in avisos[0]
     assert "510x400" in avisos[0] and "730x600" in avisos[0]
     assert "nao dei andamento" in avisos[0]
 
@@ -189,7 +250,7 @@ def test_pdf_no_tamanho_certo_fecha(monkeypatch, tmp_path):
     monkeypatch.setattr(P, "IMPRIMIR_ORIGINAL", False)
     feitos = []
 
-    def gerar(origem, saida, base, pagina, dpi, larg, alt, usadas, cinza=False):
+    def gerar(origem, saida, base, pagina, dpi, larg, alt, usadas, cinza=False, alvo=None):
         feitos.append((base, dpi))
         alvo = os.path.join(saida, base + ".pdf")
         open(alvo, "wb").write(b"chapa")
@@ -219,7 +280,7 @@ def test_a_trava_de_cor_da_voprix_nao_pega_o_fialho(monkeypatch, tmp_path):
                         lambda *a: pytest.fail("regra de cinza e da VOPRIX"))
     feitos = []
 
-    def gerar(origem, saida, base, pagina, dpi, larg, alt, usadas, cinza=False):
+    def gerar(origem, saida, base, pagina, dpi, larg, alt, usadas, cinza=False, alvo=None):
         feitos.append(base)
         return os.path.join(saida, base + ".pdf"), ["K"]
 
@@ -264,3 +325,76 @@ def test_varrer_do_fialho_ve_pdf_e_cdr(monkeypatch, tmp_path):
 
     assert sorted(vistos) == ["CALENDARIO SICRED MONTAGEM.cdr",
                               "FORRO AGENDA unicidades  2027.pdf"]
+
+
+# ----------------------------------------------------------------------
+# O corte, em pixel
+# ----------------------------------------------------------------------
+
+def _imagem_da_chapa(pdf):
+    """(largura, altura, bytes) da imagem que ficou dentro do PDF."""
+    import re
+    import zlib
+    dados = open(pdf, "rb").read()
+    cab = re.search(rb"/Width (\d+) /Height (\d+)", dados)
+    w, h = int(cab.group(1)), int(cab.group(2))
+    inicio = dados.index(b"stream\n", cab.end()) + 7
+    fim = dados.index(b"\nendstream", inicio)
+    return w, h, zlib.decompress(dados[inicio:fim])
+
+
+def test_arte_maior_e_cortada_igual_dos_dois_lados(tmp_path):
+    """Arte 100 de largura na chapa de 80: some 10 de cada lado."""
+    from PIL import Image
+    from finart_ctp.pdf_builder import montar_pdf_cinza
+
+    arte = Image.new("L", (100, 40), 128)
+    for x in range(100):
+        arte.putpixel((x, 0), x)            # regua para saber o que sobrou
+    tif = str(tmp_path / "arte.tif")
+    arte.save(tif)
+
+    saida = str(tmp_path / "chapa.pdf")
+    montar_pdf_cinza(tif, saida, 510, 400, alvo=(80, 40))
+
+    w, h, px = _imagem_da_chapa(saida)
+    assert (w, h) == (80, 40)
+    primeira_linha = px[:80]
+    assert primeira_linha[0] == 10          # os 10 primeiros foram cortados
+    assert primeira_linha[-1] == 89         # e os 10 ultimos tambem
+
+
+def test_arte_menor_ganha_branco_em_volta(tmp_path):
+    """Arte 60 de largura na chapa de 80: 10 de branco de cada lado."""
+    from PIL import Image
+    from finart_ctp.pdf_builder import montar_pdf_cinza
+
+    arte = Image.new("L", (60, 20), 0)      # tudo preto, para o branco saltar
+    tif = str(tmp_path / "arte.tif")
+    arte.save(tif)
+
+    saida = str(tmp_path / "chapa.pdf")
+    montar_pdf_cinza(tif, saida, 510, 400, alvo=(80, 30))
+
+    w, h, px = _imagem_da_chapa(saida)
+    assert (w, h) == (80, 30)
+    assert px[:80] == b"\xff" * 80          # faixa de cima: branca inteira
+    meio = px[15 * 80:16 * 80]              # linha no meio da arte
+    assert meio[:10] == b"\xff" * 10        # borda esquerda branca
+    assert meio[10:70] == b"\x00" * 60      # arte preta no centro
+    assert meio[70:] == b"\xff" * 10        # borda direita branca
+
+
+def test_sem_alvo_a_imagem_sai_do_tamanho_que_entrou(tmp_path):
+    """Quem bate na medida exata nao passa por corte nenhum."""
+    from PIL import Image
+    from finart_ctp.pdf_builder import montar_pdf_cinza
+
+    tif = str(tmp_path / "arte.tif")
+    Image.new("L", (50, 30), 77).save(tif)
+    saida = str(tmp_path / "chapa.pdf")
+    montar_pdf_cinza(tif, saida, 510, 400)
+
+    w, h, px = _imagem_da_chapa(saida)
+    assert (w, h) == (50, 30)
+    assert px == b"\x4d" * (50 * 30)
