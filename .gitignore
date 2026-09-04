@@ -13,3 +13,6 @@ _tmp_*/
 _log_ctp.txt
 config_local.py
 legacy/
+
+# ajustes do Claude Code desta maquina (caminhos locais)
+.claude/settings.local.json
